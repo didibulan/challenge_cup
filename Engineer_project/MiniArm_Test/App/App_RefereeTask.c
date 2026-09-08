@@ -12,9 +12,16 @@
 /************************************宏定义开关**************************************/
 #define COMM_DAEMON
 /************************************extern_variable**************************************/
+extern bool rotate;
+bool rotate = false;
 extern bool is_enable;
 extern bool is_VT03_connected;
 extern bool is_vt03Update;
+extern osMutexId RefereeMutexHandle;
+extern float joint_q[9];
+extern float pitch;
+extern float target_q[9];
+uint64_t vt03_Armtask_mode_sw = 0;
 /************************************Private_variable**************************************/
 VT03_Rx_Message_t vt03_rx_msg = {};
 #ifdef COMM_DAEMON
@@ -48,7 +55,9 @@ RefereeInitConfig_s referee_config = {
     .daemon_config = &daemon_config
 #endif
 };
-
+//自定义控制器部分
+float target_q[9] = {-1.53f, 0, 1.2f, 1.2f, 1.f, 1.f, 0.5f, 0.f, 0.f};  //收到自定义控制器的位姿  j1和j5需要加负号由于自定义控制器与大臂的安装关系
+uint16_t finger[2] = {}; // 手套手指位姿
 /************************************Private_functions**************************************/
 
 /************************************Private_init**************************************/
@@ -70,14 +79,50 @@ void App_RefereeTask(void const * argument)
     referee_instance->vt03_data.ch_2 = 1024;
     referee_instance->vt03_data.ch_3 = 1024;
 
+    if (referee_instance == NULL)
+    {
+        Log_Error("Referee Register Failed!");
+    }
+
     while (1){
         if (referee_instance->Referee_Data_TF == true){
             is_enable = true;
             is_vt03Update = true;
+            if (referee_instance->vt03_data.mode_sw != 0)
+            {
+                is_VT03_connected = true;
+                vt03_Armtask_mode_sw = referee_instance->vt03_data.mode_sw;
+            }
+            else {
+                is_VT03_connected = false;
+                vt03_Armtask_mode_sw = 0;
+            }
+            // 填充J2~J7的7个joint和finger数据
+            if (xSemaphoreTake(RefereeMutexHandle, 0) == pdTRUE)
+            {
+                memcpy(target_q + 2,referee_instance->origin_data.ext_custom_robot_data.data,6*sizeof(float));
+                target_q[7] *= 1.55f;
+                memcpy(finger, referee_instance->origin_data.ext_custom_robot_data.data + 24, 4);// 拷贝5Bytes的finger数组
+                target_q[8] = ((finger[0]-250)/550.f)* 3 * PI / 2 - PI*3/4.f;
+
+                if (rotate) {
+                    target_q[7] = -target_q[7];
+                    target_q[6] = ((target_q[6] + PI) > 2 * PI) ? (target_q[6] + PI - 2 * PI) : (target_q[6] + PI);
+                }
+                pitch = ((finger[1]-250)/550.f)* (-0.8f) + 0.25;
+                xSemaphoreGive(RefereeMutexHandle);
+            }
+            memcpy(&vt03_rx_msg,&referee_instance->vt03_data,sizeof(VT03_Rx_Message_t));
+        }else{
+            is_enable = false;
+            is_vt03Update = true;
+            is_VT03_connected = false;
+            vt03_Armtask_mode_sw = 0;
+            memcpy(&vt03_rx_msg,&referee_instance->vt03_data,sizeof(VT03_Rx_Message_t));
         }
 
-        memcpy(&vt03_rx_msg,&referee_instance->vt03_data,sizeof(VT03_Rx_Message_t));
-        Referee_Clear_Uart_Error(referee_instance);
+        // memcpy(&vt03_rx_msg,&referee_instance->vt03_data,sizeof(VT03_Rx_Message_t));
+        // Referee_Clear_Uart_Error(referee_instance);
         osDelay(1);
     }
 }

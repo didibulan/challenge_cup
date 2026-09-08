@@ -174,6 +174,7 @@ static void Referee_Uart_DMA_Callback(UartInstance_s* instance)
            if (CRC16_Verify(ref_rx_Buffer[ready_rx_buff],21))
            {
                memcpy(&((RefereeInstance_s*)instance->id)->vt03_data,ref_rx_Buffer[ready_rx_buff],21);
+               ((RefereeInstance_s*)instance->id)->Referee_Data_TF = true;
                Log("Get VT03 msg");
                vt03_cnt++;
                return;

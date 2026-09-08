@@ -353,6 +353,90 @@ DmMotorInitConfig_s arm_motor8_config = {
     }
 };
 
+JointLimitInstance_s *motorjoints_limit[9] = {};
+static JointLimitInstance_s *motorjoint_limit_0 = NULL;
+static JointLimitInstance_s *motorjoint_limit_1 = NULL;
+static JointLimitInstance_s *motorjoint_limit_2 = NULL;
+static JointLimitInstance_s *motorjoint_limit_3 = NULL;
+static JointLimitInstance_s *motorjoint_limit_4 = NULL;
+static JointLimitInstance_s *motorjoint_limit_5 = NULL;
+static JointLimitInstance_s *motorjoint_limit_6 = NULL;
+static JointLimitInstance_s *motorjoint_limit_7 = NULL;
+static JointLimitInstance_s *motorjoint_limit_8 = NULL;
+
+JointLimitInitConfig_s motor_jointlimit_0_config = {
+    .max_vel = 1.0f,
+    .max_acc = 5.0f,
+    .max_limit = PI / 2,
+    .min_limit = -3 * PI / 2,
+    .dead_zone = 0.05f,
+    .limit_enabled = true,
+};
+JointLimitInitConfig_s motor_jointlimit_1_config = {
+    .max_vel = 1.0f,
+    .max_acc = 5.0f,
+    .max_limit = 0.85f,
+    .min_limit = - 0.75f,
+    .dead_zone = 0.05f,
+    .limit_enabled = true,
+};
+JointLimitInitConfig_s motor_jointlimit_2_config = {
+    .max_vel = 1.0f,
+    .max_acc = 5.0f,
+    .max_limit = 1.8f,
+    .min_limit = - 1.6f,
+    .dead_zone = 0.05f,
+    .limit_enabled = true,
+};
+JointLimitInitConfig_s motor_jointlimit_3_config = {
+    .max_vel = 1.0f,
+    .max_acc = 5.0f,
+    .max_limit = PI / 2,
+    .min_limit = - PI / 2,
+    .dead_zone = 0.05f,
+    .limit_enabled = true,
+};
+JointLimitInitConfig_s motor_jointlimit_4_config = {
+    .max_vel = 1.0f,
+    .max_acc = 5.0f,
+    .max_limit = PI,
+    .min_limit = - PI,
+    .dead_zone = 0.05f,
+    .limit_enabled = true,
+};
+JointLimitInitConfig_s motor_jointlimit_5_config = {
+    .max_vel = 1.0f,
+    .max_acc = 5.0f,
+    .max_limit = PI / 2,
+    .min_limit = - PI / 2,
+    .dead_zone = 0.05f,
+    .limit_enabled = true,
+};
+JointLimitInitConfig_s motor_jointlimit_6_config = {
+    .max_vel = 2.5f,
+    .max_acc = 15.0f,
+    .max_limit = 3.f,
+    .min_limit = - 3.f,
+    .dead_zone = 0.05f,
+    .limit_enabled = true,
+};
+JointLimitInitConfig_s motor_jointlimit_7_config = {
+    .max_vel = 1.0f,
+     .max_acc = 5.0f,
+    .max_limit = 3.f,
+    .min_limit = - 3.f,
+    .dead_zone = 0.05f,
+    .limit_enabled = true,
+};
+JointLimitInitConfig_s motor_jointlimit_8_config = {
+    .max_vel = 1.0f,
+    .max_acc = 5.0f,
+    .max_limit = 3.f,
+    .min_limit = - 3.f,
+    .dead_zone = 0.05f,
+    .limit_enabled = true,
+};
+
 /************************************Task**************************************/
 void App_Init(void const * argument){
     while (arm_motors[0] == NULL) arm_motors[0] = Motor_DM_Register(&arm_motor0_config);
@@ -365,6 +449,27 @@ void App_Init(void const * argument){
 
     while (arm_motors[7] == NULL) arm_motors[7] = Motor_DM_Register(&arm_motor4_config);
     while (arm_motors[8] == NULL) arm_motors[8] = Motor_DM_Register(&arm_motor8_config);
+
+    while (motorjoint_limit_0 == NULL) motorjoint_limit_0 = JointLimit_Register(&motor_jointlimit_0_config);
+    while (motorjoint_limit_1 == NULL) motorjoint_limit_1 = JointLimit_Register(&motor_jointlimit_1_config);
+    while (motorjoint_limit_2 == NULL) motorjoint_limit_2 = JointLimit_Register(&motor_jointlimit_2_config);
+    while (motorjoint_limit_3 == NULL) motorjoint_limit_3 = JointLimit_Register(&motor_jointlimit_3_config);
+    while (motorjoint_limit_4 == NULL) motorjoint_limit_4 = JointLimit_Register(&motor_jointlimit_4_config);
+    while (motorjoint_limit_5 == NULL) motorjoint_limit_5 = JointLimit_Register(&motor_jointlimit_5_config);
+    while (motorjoint_limit_6 == NULL) motorjoint_limit_6 = JointLimit_Register(&motor_jointlimit_6_config);
+
+    while (motorjoint_limit_7 == NULL) motorjoint_limit_7 = JointLimit_Register(&motor_jointlimit_7_config);
+    while (motorjoint_limit_8 == NULL) motorjoint_limit_8 = JointLimit_Register(&motor_jointlimit_8_config);
+    motorjoints_limit[0] = motorjoint_limit_0;
+    motorjoints_limit[1] = motorjoint_limit_1;
+    motorjoints_limit[2] = motorjoint_limit_2;
+    motorjoints_limit[3] = motorjoint_limit_3;
+    motorjoints_limit[4] = motorjoint_limit_7;
+    motorjoints_limit[5] = motorjoint_limit_5;
+    motorjoints_limit[6] = motorjoint_limit_6;
+
+    motorjoints_limit[7] = motorjoint_limit_4;
+    motorjoints_limit[8] = motorjoint_limit_8;
 
     //删除初始化任务
     vTaskDelete(NULL);
