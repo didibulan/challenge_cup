@@ -7,6 +7,7 @@
 #include "cmsis_os.h"
 #include "stdbool.h"
 #include "dev_referee.h"
+#include "App_ArmTask.h"
 
 typedef union
 {

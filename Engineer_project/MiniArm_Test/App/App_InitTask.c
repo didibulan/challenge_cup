@@ -13,7 +13,43 @@
 
 /************************************Register_extern_variable**************************************/
 DmMotorInstance_s* arm_motors[9] = {NULL};
+DmMotorInstance_s* motor_gripper = NULL;
 /************************************Init_Settings**************************************/
+    //夹爪电机
+DmMotorInitConfig_s motor_gripper_config = {
+    .topic_name = "gripper",
+    .type = J3507,
+    .can_config = {
+        .topic_name = "gripper_fdcan2",
+        .fdcan_mode = FDCAN_BIT_SWITCHING_MODE,
+        .DLC = FDCAN_DLC_BYTES_8,
+        .can_number = 2,
+        .tx_id = 0x0A,
+        .rx_id = 0x1A,
+    },
+    .velocity_pid_config = {
+        .kp = 0.5f,
+        .ki = 0.0f,
+        .kd = 0.0f,
+        .out_max = 1.5f,
+    },
+    .parameters = {
+        .pos_max = 12.566f,
+        .vel_max = 50.0f,
+        .tor_max = 5.0f,
+        .kd_int = 0.3f,
+        .kp_int = 0.8f,
+        .kd_max = 5.0f,
+        .kp_max = 500.0f,
+    },
+    .angle_pid_config = {
+        .kp = 4.0f,
+        .ki = 0.0f,
+        .kd = 0.0f,
+        .out_max = 3.0f,
+    },
+ };
+
 DmMotorInitConfig_s arm_motor0_config = {
     .topic_name = "arm_motor0",
     .type = J6248,
@@ -439,6 +475,8 @@ JointLimitInitConfig_s motor_jointlimit_8_config = {
 
 /************************************Task**************************************/
 void App_Init(void const * argument){
+    while (motor_gripper == NULL) motor_gripper = Motor_DM_Register(&motor_gripper_config);
+
     while (arm_motors[0] == NULL) arm_motors[0] = Motor_DM_Register(&arm_motor0_config);
     while (arm_motors[1] == NULL) arm_motors[1] = Motor_DM_Register(&arm_motor1_config);
     while (arm_motors[2] == NULL) arm_motors[2] = Motor_DM_Register(&arm_motor2_config);

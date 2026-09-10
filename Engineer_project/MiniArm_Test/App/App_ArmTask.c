@@ -30,6 +30,8 @@ bool is_enable = false;
 bool is_VT03_connected = false;
 bool is_vt03Update = false;
 
+extern float gripper_pos;
+extern DmMotorInstance_s* motor_gripper;
 extern DmMotorInstance_s* arm_motors[9];
 extern JointLimitInstance_s *motorjoints_limit[9];
 float planned_q[9] = {};
@@ -146,6 +148,8 @@ void App_ArmTask(void const * argument){
 
 #ifdef CIRCULAR_ENABLE
     while (1){
+        Enable_Arm_Motors(motor_gripper);
+        osDelay(1);
         for (uint8_t i = 0; i < 9; i++){
         Enable_Arm_Motors(arm_motors[i]);
         osDelay(2);
@@ -154,6 +158,7 @@ void App_ArmTask(void const * argument){
 #endif
 
 #ifdef ZERO_POINT_MARK
+    // ZeroPoint_Mark(motor_gripper);
     ZeroPoint_Mark(arm_motors[1]);
 
     while (1){
@@ -163,15 +168,21 @@ void App_ArmTask(void const * argument){
         }
     }
 #endif
+    do{
+        Enable_Arm_Motors(motor_gripper);
+        osDelay(1);
+    }while (motor_gripper->motor_state == DM_DISABLE);
 
     for (uint8_t i = 0; i < 9; i++){
         Enable_Arm_Motors(arm_motors[i]);
         osDelay(1);
     }
 
-    while (!Arm_Feedback_Ready()) {
-        osDelay(1);
-    }
+    // while (!Arm_Feedback_Ready()) {
+    //     osDelay(1);
+    // }
+
+    osDelay(10);
 
     // 用使能后的实际电机反馈初始化轨迹规划器，避免首次进入自定义模式时从零位规划。
     for (uint8_t i = 0; i < 9; i++) {
@@ -185,6 +196,11 @@ void App_ArmTask(void const * argument){
         Arm_Run_Planned_Target(hold_target_q);
         osDelay(1);
     }
+
+    Motor_Dm_Mit_Control(motor_gripper, gripper_pos, 2.f, -0.5f);
+#ifdef CAN_TRANSMIT
+    Motor_Dm_Transmit(motor_gripper);
+#endif
 #ifdef LINK_GRAVITY_DYNAMICS_IDENTIFICATION
     while (1){
         for (uint8_t i = 0; i < 9; i++){
@@ -250,9 +266,19 @@ void App_ArmTask(void const * argument){
         {
             case 0:default:
             Arm_Run_Planned_Target(remote_target_q);
+
+            Motor_Dm_Mit_Control(motor_gripper, gripper_pos, 2.f, -0.5f);
+#ifdef CAN_TRANSMIT
+            Motor_Dm_Transmit(motor_gripper);
+#endif
                 break;
             case 1:
             Arm_Run_Planned_Target(hold_target_q);
+
+            Motor_Dm_Mit_Control(motor_gripper, gripper_pos, 2.f, -0.5f);
+#ifdef CAN_TRANSMIT
+            Motor_Dm_Transmit(motor_gripper);
+#endif
                 break;
             //执行自定义控制器指令
             case 2:
@@ -270,6 +296,11 @@ void App_ArmTask(void const * argument){
                     xSemaphoreGive(RefereeMutexHandle);
                 }
                 Arm_Run_Planned_Target(arm_target_q);
+
+                Motor_Dm_Mit_Control(motor_gripper, gripper_pos, 2.f, -0.5f);
+    #ifdef CAN_TRANSMIT
+                Motor_Dm_Transmit(motor_gripper);
+    #endif
                 break;
         }
         last_arm_mode = arm_mode;

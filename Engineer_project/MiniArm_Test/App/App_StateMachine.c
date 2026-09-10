@@ -15,6 +15,7 @@
 extern VT03_Rx_Message_t vt03_rx_msg;
 extern float target_q[9];
 extern osMutexId RefereeMutexHandle;
+float gripper_pos = -0.2f;
 /************************************Private_variable**************************************/
 static KeyBoard_t vt03_keys = {};
 static const float key_dt = 0.005f;
@@ -54,6 +55,8 @@ static void Update_Arm_Key_Control(void)
 /************************************Task**************************************/
 void App_StateMachineTask(void const * argument){
     while (1){
+        if (vt03_keys.z) gripper_pos = -0.2f;
+        if (vt03_keys.x) gripper_pos = 0.38f;
         Update_Arm_Key_Control();
         osDelay(1);
     }
