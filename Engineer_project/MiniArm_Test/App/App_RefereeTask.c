@@ -58,6 +58,8 @@ RefereeInitConfig_s referee_config = {
 //自定义控制器部分
 float target_q[9] = {-1.53f, 0, 1.2f, 1.2f, 1.f, 1.f, 0.5f, 0.f, 0.f};  //收到自定义控制器的位姿  j1和j5需要加负号由于自定义控制器与大臂的安装关系
 uint16_t finger[2] = {}; // 手套手指位姿
+static uint32_t last_custom_robot_update_time = 0;
+static bool custom_robot_data_copied = false;
 /************************************Private_functions**************************************/
 
 /************************************Private_init**************************************/
@@ -100,16 +102,26 @@ void App_RefereeTask(void const * argument)
             // 填充J2~J7的7个joint和finger数据
             if (xSemaphoreTake(RefereeMutexHandle, 0) == pdTRUE)
             {
-                memcpy(target_q + 2,referee_instance->origin_data.ext_custom_robot_data.data,6*sizeof(float));
-                target_q[7] *= 1.55f;
-                memcpy(finger, referee_instance->origin_data.ext_custom_robot_data.data + 24, 4);// 拷贝5Bytes的finger数组
-                target_q[8] = ((finger[0]-250)/550.f)* 3 * PI / 2 - PI*3/4.f;
+                if (referee_instance->custom_robot_data_valid &&
+                    (!custom_robot_data_copied ||
+                     referee_instance->custom_robot_update_time != last_custom_robot_update_time))
+                {
+                    float custom_joint_target[6] = {};
+                    memcpy(custom_joint_target, referee_instance->origin_data.ext_custom_robot_data.data, sizeof(custom_joint_target));
+                    memcpy(target_q + 2, custom_joint_target, sizeof(custom_joint_target));
+                    target_q[7] = custom_joint_target[5] * 1.55f;
+                    memcpy(finger, referee_instance->origin_data.ext_custom_robot_data.data + 24, 4);
+                    target_q[8] = ((finger[0] - 250) / 550.f) * 3 * PI / 2 - PI * 3 / 4.f;
 
-                if (rotate) {
-                    target_q[7] = -target_q[7];
-                    target_q[6] = ((target_q[6] + PI) > 2 * PI) ? (target_q[6] + PI - 2 * PI) : (target_q[6] + PI);
+                    if (rotate) {
+                        target_q[7] = -target_q[7];
+                        target_q[6] = ((target_q[6] + PI) > 2 * PI) ? (target_q[6] + PI - 2 * PI) : (target_q[6] + PI);
+                    }
+
+                    pitch = ((finger[1] - 250) / 550.f) * (-0.8f) + 0.25;
+                    last_custom_robot_update_time = referee_instance->custom_robot_update_time;
+                    custom_robot_data_copied = true;
                 }
-                pitch = ((finger[1]-250)/550.f)* (-0.8f) + 0.25;
                 xSemaphoreGive(RefereeMutexHandle);
             }
             memcpy(&vt03_rx_msg,&referee_instance->vt03_data,sizeof(VT03_Rx_Message_t));
@@ -122,7 +134,7 @@ void App_RefereeTask(void const * argument)
         }
 
         // memcpy(&vt03_rx_msg,&referee_instance->vt03_data,sizeof(VT03_Rx_Message_t));
-        // Referee_Clear_Uart_Error(referee_instance);
+        Referee_Clear_Uart_Error(referee_instance);
         osDelay(1);
     }
 }

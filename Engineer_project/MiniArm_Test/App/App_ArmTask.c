@@ -12,6 +12,7 @@
 
 #include "Alg_Task.h"
 #include "dev_planning.h"
+#include "dev_referee.h"
 /************************************宏定义开关**************************************/
 //是否开启零点标定
 // #define ZERO_POINT_MARK
@@ -36,6 +37,7 @@ float planned_q[9] = {};
 float pitch = 0.0f;
 extern float target_q[9];
 extern uint64_t vt03_Armtask_mode_sw;
+extern RefereeInstance_s *referee_instance;
 /* AlgTask 共享变量 */
 extern float joint_q[9];
 extern float joint_vel[9];
@@ -53,6 +55,7 @@ static float torque[9] = {};
 float q[9] = {};
 static float qd[9] = {};
 static float arm_target_q[9] = {-1.53f, 0, 1.2f, 1.2f, 1.f, 1.f, 0.5f, 0.f, 0.0f};
+static float remote_target_q[9] = {};
 
 /************************************Private_functions**************************************/
 static BaseType_t Enable_Arm_Motors(DmMotorInstance_s *motor_joint_x){
@@ -64,6 +67,17 @@ static BaseType_t Enable_Arm_Motors(DmMotorInstance_s *motor_joint_x){
         if (++retry > 100) return pdFALSE;
     }while (motor_joint_x->motor_state == DM_DISABLE);
     return pdTRUE;
+}
+
+static bool Arm_Feedback_Ready(void){
+    for (uint8_t i = 0; i < 9; i++) {
+        if (arm_motors[i] == NULL ||
+            arm_motors[i]->can_instance == NULL ||
+            arm_motors[i]->can_instance->cnt == 0) {
+            return false;
+        }
+    }
+    return true;
 }
 
 static BaseType_t Disable_Arm_Motors(DmMotorInstance_s *motor_joint_x){
@@ -106,7 +120,7 @@ void App_ArmTask(void const * argument){
 #endif
 
 #ifdef ZERO_POINT_MARK
-    ZeroPoint_Mark(arm_motors[3]);
+    ZeroPoint_Mark(arm_motors[8]);
 
     while (1){
         for (uint8_t i = 0; i < 9; i++){
@@ -121,10 +135,15 @@ void App_ArmTask(void const * argument){
         osDelay(1);
     }
 
+    // while (!Arm_Feedback_Ready()) {
+    //     osDelay(1);
+    // }
+
     // 用使能后的实际电机反馈初始化轨迹规划器，避免首次进入自定义模式时从零位规划。
     for (uint8_t i = 0; i < 9; i++) {
         q[i] = arm_motors[i]->message.out_position;
     }
+    memcpy(remote_target_q, q, sizeof(remote_target_q));
     Arm_Initplanning(motorjoints_limit);
 
 #ifdef LINK_GRAVITY_DYNAMICS_IDENTIFICATION
@@ -165,23 +184,66 @@ void App_ArmTask(void const * argument){
             xSemaphoreGive(RoboticAlgMutexHandle);
         }
 
-        switch (is_enable ? vt03_Armtask_mode_sw : 0)
+        const uint64_t arm_mode = is_enable ? vt03_Armtask_mode_sw : 0;
+        static uint64_t last_arm_mode = 0;
+
+        if (arm_mode == 2 && last_arm_mode != 2) {
+            for (uint8_t i = 0; i < 9; i++) {
+                arm_target_q[i] = q[i];
+            }
+            Arm_Initplanning(motorjoints_limit);
+        }
+
+        if (arm_mode == 1 && last_arm_mode != 1) {
+            memcpy(remote_target_q, q, sizeof(remote_target_q));
+            Arm_Initplanning(motorjoints_limit);
+        }
+
+        if (arm_mode == 0 && last_arm_mode != 0) {
+            memcpy(remote_target_q, q, sizeof(remote_target_q));
+            Arm_Initplanning(motorjoints_limit);
+        }
+
+        switch (arm_mode)
         {
             case 0:default:
-            case 1:
-                for (uint8_t i = 0; i < 9; i++){
-                    Motor_Dm_FullParam_MIT_Control(arm_motors[i], 0, 0, 0, 0,torque[i]);
+                for (int8_t i = 0; i < 9; i++) {
+                    Remap_Target(i, remote_target_q);
+                }
+                Extract_Trajectory_Params(motorjoints_limit, remote_target_q);
+
+                for (uint8_t i = 0; i < 9; i++) {
+                    const float mit_pos = Planning_OutputCmdPos(i, motorjoints_limit[i]->pos);
+                    const float mit_vel = motorjoints_limit[i]->vel;
+                    Motor_Dm_Mit_Control(arm_motors[i], mit_pos, mit_vel * 0.5f, torque[i]);
                 #ifdef CAN_TRANSMIT
                     Motor_Dm_Transmit(arm_motors[i]);
                 #endif
-            }
+                }
+                break;
+            case 1:
+                for (int8_t i = 0; i < 9; i++) {
+                    Remap_Target(i, remote_target_q);
+                }
+                Extract_Trajectory_Params(motorjoints_limit, remote_target_q);
+
+                for (uint8_t i = 0; i < 9; i++) {
+                    const float mit_pos = Planning_OutputCmdPos(i, motorjoints_limit[i]->pos);
+                    const float mit_vel = motorjoints_limit[i]->vel;
+                    Motor_Dm_Mit_Control(arm_motors[i], mit_pos, mit_vel * 0.5f, torque[i]);
+                #ifdef CAN_TRANSMIT
+                    Motor_Dm_Transmit(arm_motors[i]);
+                #endif
+                }
                 break;
             //执行自定义控制器指令
             case 2:
                 if (xSemaphoreTake(RefereeMutexHandle, 0) == pdTRUE) {
-                    for (int i =0;i<9;i++){
-                        if (arm_custom_enable[i] == 1){
-                            arm_target_q[i] = arm_sign[i]*target_q[i] + arm_bias[i];
+                    if (referee_instance->custom_robot_data_valid) {
+                        for (int i = 0; i < 9; i++){
+                            if (arm_custom_enable[i] == 1){
+                                arm_target_q[i] = arm_sign[i] * target_q[i] + arm_bias[i];
+                            }
                         }
                     }
                     xSemaphoreGive(RefereeMutexHandle);
@@ -200,6 +262,8 @@ void App_ArmTask(void const * argument){
 
                 break;
         }
+
+        last_arm_mode = arm_mode;
 
         osDelay(1);
     }

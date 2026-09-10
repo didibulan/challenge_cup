@@ -143,6 +143,7 @@ typedef struct {
     uint8_t Referee_Self_ID; //当前机器人的ID
     uint16_t Referee_SelfClient_ID; //发送者机器人对应的客户端ID
     uint32_t custom_robot_update_time ;
+    bool custom_robot_data_valid; //是否收到过自定义控制器数据
     uint32_t cnt;
     uint32_t rx_freq;
 } RefereeInstance_s;

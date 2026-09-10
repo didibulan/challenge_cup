@@ -295,6 +295,7 @@ void Referee_Decode_unpack_data(RefereeInstance_s* ref_instance, const uint8_t* 
     case CUSTOM_CONTROLLER_DATA_CMD_ID: memcpy(&(ref_instance->origin_data.ext_custom_robot_data), data + index, sizeof(custom_robot_data_t));
         Log("Get custom_robot data");
         ref_instance->custom_robot_update_time =xTaskGetTickCount();
+        ref_instance->custom_robot_data_valid = true;
         break;
     case CUSTOM_CONTROLLER_RECEIVED_DATA_CMD_ID: memcpy(&(ref_instance->origin_data.ext_robot_custom_data), data + index,sizeof(custom_robot_data_t));
         Log("client get robot data");
@@ -367,6 +368,7 @@ RefereeInstance_s* Referee_Register(const RefereeInitConfig_s* config)
     instance->rx_freq = 0;
     instance->Referee_Data_TF = false;
     instance->custom_robot_update_time  = 0;
+    instance->custom_robot_data_valid = false;
     Referee_Data_Init(instance);
     Log_Passing("%s : Referee instance register success", config->topic_name);
     return instance;
