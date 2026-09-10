@@ -33,6 +33,7 @@ bool is_vt03Update = false;
 extern DmMotorInstance_s* arm_motors[9];
 extern JointLimitInstance_s *motorjoints_limit[9];
 float planned_q[9] = {};
+float q[9] = {};
 //refereeTask共享变量
 float pitch = 0.0f;
 extern float target_q[9];
@@ -51,8 +52,21 @@ int arm_sign[9] = {1,1,1,1,1,1,1,1,1};
 float arm_bias[9]={0,0,0,0,0,0,0,0,0};
 bool arm_custom_enable[9] ={1,1,1,1,1,1,1,1,1};
 
+static uint64_t last_arm_mode = UINT64_MAX;
+static uint32_t custom_entry_seq = 0;
+static bool custom_target_active = false;
+
+static const float startup_target_q[9] = {
+    -0.2f, 0.f, 1.9f,
+    1.62f, -2.02f, -0.67f,
+    0.f, 0.8f, 0.f,
+};
+static float hold_target_q[9] = {};
+static float custom_target_q[9] = {};
+
+extern volatile uint32_t custom_target_seq;
+
 static float torque[9] = {};
-float q[9] = {};
 static float qd[9] = {};
 static float arm_target_q[9] = {-1.53f, 0, 1.2f, 1.2f, 1.f, 1.f, 0.5f, 0.f, 0.0f};
 static float remote_target_q[9] = {};
@@ -103,6 +117,26 @@ static BaseType_t ZeroPoint_Mark(DmMotorInstance_s *motor_joint_x){
 /************************************Private_init**************************************/
 
 /************************************Public_functions**************************************/
+static void Arm_Run_Planned_Target(float target[9])
+{
+    for (int8_t i = 0; i < 9; i++) {
+        Remap_Target(i, target);
+    }
+    Extract_Trajectory_Params(motorjoints_limit, target);
+    for (uint8_t i = 0; i < 9; i++) {
+        float pos = Planning_OutputCmdPos(i, motorjoints_limit[i]->pos);
+        float vel = motorjoints_limit[i]->vel;
+        Motor_Dm_Mit_Control(
+            arm_motors[i],
+            pos,
+            vel * 0.5f,
+            torque[i]
+        );
+#ifdef CAN_TRANSMIT
+        Motor_Dm_Transmit(arm_motors[i]);
+#endif
+    }
+}
 
 /************************************Task**************************************/
 void App_ArmTask(void const * argument){
@@ -120,7 +154,7 @@ void App_ArmTask(void const * argument){
 #endif
 
 #ifdef ZERO_POINT_MARK
-    ZeroPoint_Mark(arm_motors[8]);
+    ZeroPoint_Mark(arm_motors[1]);
 
     while (1){
         for (uint8_t i = 0; i < 9; i++){
@@ -135,9 +169,9 @@ void App_ArmTask(void const * argument){
         osDelay(1);
     }
 
-    // while (!Arm_Feedback_Ready()) {
-    //     osDelay(1);
-    // }
+    while (!Arm_Feedback_Ready()) {
+        osDelay(1);
+    }
 
     // 用使能后的实际电机反馈初始化轨迹规划器，避免首次进入自定义模式时从零位规划。
     for (uint8_t i = 0; i < 9; i++) {
@@ -146,6 +180,11 @@ void App_ArmTask(void const * argument){
     memcpy(remote_target_q, q, sizeof(remote_target_q));
     Arm_Initplanning(motorjoints_limit);
 
+    memcpy(hold_target_q, startup_target_q, sizeof(hold_target_q));
+    for (uint32_t k = 0; k < 5000; k++) {
+        Arm_Run_Planned_Target(hold_target_q);
+        osDelay(1);
+    }
 #ifdef LINK_GRAVITY_DYNAMICS_IDENTIFICATION
     while (1){
         for (uint8_t i = 0; i < 9; i++){
@@ -189,82 +228,51 @@ void App_ArmTask(void const * argument){
 
         if (arm_mode == 2 && last_arm_mode != 2) {
             for (uint8_t i = 0; i < 9; i++) {
-                arm_target_q[i] = q[i];
+                custom_target_q[i] = q[i];
+                arm_target_q[i]    = q[i];
             }
             Arm_Initplanning(motorjoints_limit);
+            custom_entry_seq = custom_target_seq;
+            custom_target_active = false;
         }
 
         if (arm_mode == 1 && last_arm_mode != 1) {
-            memcpy(remote_target_q, q, sizeof(remote_target_q));
+            memcpy(hold_target_q, q, sizeof(hold_target_q));
             Arm_Initplanning(motorjoints_limit);
         }
 
         if (arm_mode == 0 && last_arm_mode != 0) {
-            memcpy(remote_target_q, q, sizeof(remote_target_q));
+            memcpy(hold_target_q, q, sizeof(hold_target_q));
             Arm_Initplanning(motorjoints_limit);
         }
 
         switch (arm_mode)
         {
             case 0:default:
-                for (int8_t i = 0; i < 9; i++) {
-                    Remap_Target(i, remote_target_q);
-                }
-                Extract_Trajectory_Params(motorjoints_limit, remote_target_q);
-
-                for (uint8_t i = 0; i < 9; i++) {
-                    const float mit_pos = Planning_OutputCmdPos(i, motorjoints_limit[i]->pos);
-                    const float mit_vel = motorjoints_limit[i]->vel;
-                    Motor_Dm_Mit_Control(arm_motors[i], mit_pos, mit_vel * 0.5f, torque[i]);
-                #ifdef CAN_TRANSMIT
-                    Motor_Dm_Transmit(arm_motors[i]);
-                #endif
-                }
+            Arm_Run_Planned_Target(remote_target_q);
                 break;
             case 1:
-                for (int8_t i = 0; i < 9; i++) {
-                    Remap_Target(i, remote_target_q);
-                }
-                Extract_Trajectory_Params(motorjoints_limit, remote_target_q);
-
-                for (uint8_t i = 0; i < 9; i++) {
-                    const float mit_pos = Planning_OutputCmdPos(i, motorjoints_limit[i]->pos);
-                    const float mit_vel = motorjoints_limit[i]->vel;
-                    Motor_Dm_Mit_Control(arm_motors[i], mit_pos, mit_vel * 0.5f, torque[i]);
-                #ifdef CAN_TRANSMIT
-                    Motor_Dm_Transmit(arm_motors[i]);
-                #endif
-                }
+            Arm_Run_Planned_Target(hold_target_q);
                 break;
             //执行自定义控制器指令
             case 2:
                 if (xSemaphoreTake(RefereeMutexHandle, 0) == pdTRUE) {
-                    if (referee_instance->custom_robot_data_valid) {
+                    if (referee_instance->custom_robot_data_valid &&
+                        custom_target_seq != custom_entry_seq) {
                         for (int i = 0; i < 9; i++){
                             if (arm_custom_enable[i] == 1){
                                 arm_target_q[i] = arm_sign[i] * target_q[i] + arm_bias[i];
                             }
                         }
+                        custom_entry_seq = custom_target_seq;
+                        custom_target_active = true;
                     }
                     xSemaphoreGive(RefereeMutexHandle);
                 }
-                for (int8_t i =0;i<9;i++) Remap_Target(i, arm_target_q);
-                Extract_Trajectory_Params(motorjoints_limit, arm_target_q);
-
-                for (uint8_t i = 0; i < 9; i++) {
-                    const float mit_pos = Planning_OutputCmdPos(i, motorjoints_limit[i]->pos);
-                    const float mit_vel = motorjoints_limit[i]->vel;
-                    Motor_Dm_Mit_Control(arm_motors[i], mit_pos, mit_vel * 0.5f, torque[i]);
-                #ifdef CAN_TRANSMIT
-                    Motor_Dm_Transmit(arm_motors[i]);
-                #endif
-            }
-
+                Arm_Run_Planned_Target(arm_target_q);
                 break;
         }
-
         last_arm_mode = arm_mode;
-
         osDelay(1);
     }
 }

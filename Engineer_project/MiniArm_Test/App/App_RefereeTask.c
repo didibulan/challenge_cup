@@ -23,6 +23,7 @@ extern float pitch;
 extern float target_q[9];
 uint64_t vt03_Armtask_mode_sw = 0;
 /************************************Private_variable**************************************/
+volatile uint32_t custom_target_seq = 0;
 VT03_Rx_Message_t vt03_rx_msg = {};
 #ifdef COMM_DAEMON
 static void daemon_handler (Daemon_Instance_s* instance)
@@ -112,6 +113,7 @@ void App_RefereeTask(void const * argument)
                     target_q[7] = custom_joint_target[5] * 1.55f;
                     memcpy(finger, referee_instance->origin_data.ext_custom_robot_data.data + 24, 4);
                     target_q[8] = ((finger[0] - 250) / 550.f) * 3 * PI / 2 - PI * 3 / 4.f;
+                    custom_target_seq ++ ;
 
                     if (rotate) {
                         target_q[7] = -target_q[7];
