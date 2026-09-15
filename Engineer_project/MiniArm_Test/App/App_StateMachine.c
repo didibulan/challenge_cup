@@ -30,20 +30,36 @@ static void Update_Arm_Key_Control(void)
         return;
     }
 
+    if (vt03_keys.z) gripper_pos = -0.2f;
+    if (vt03_keys.x) gripper_pos = 0.38f;
     if (xSemaphoreTake(RefereeMutexHandle, 0) == pdTRUE) {
-        if (vt03_keys.shift && vt03_keys.b) {
-            target_q[1] += remote_j1_max_vel * key_dt;
-        }
-        else if (vt03_keys.shift && vt03_keys.v) {
-            target_q[1] -= remote_j1_max_vel * key_dt;
-        }
+        if (vt03_keys.c && vt03_keys.shift) target_q[0] -= remote_j0_max_vel * key_dt;
+        else if (vt03_keys.c) target_q[0] += remote_j0_max_vel * key_dt;
 
-        if (vt03_keys.shift && vt03_keys.q) {
-            target_q[0] += remote_j0_max_vel * key_dt;
-        }
-        else if (vt03_keys.shift && vt03_keys.e) {
-            target_q[0] -= remote_j0_max_vel * key_dt;
-        }
+        if (vt03_keys.v && vt03_keys.shift) target_q[1] -= remote_j1_max_vel * key_dt;
+        else if (vt03_keys.v) target_q[1] += remote_j1_max_vel * key_dt;
+
+        if (vt03_keys.b && vt03_keys.shift) target_q[2] -= remote_j1_max_vel * key_dt;
+        else if (vt03_keys.b) target_q[2] += remote_j1_max_vel * key_dt;
+
+        if (vt03_keys.a && vt03_keys.shift) target_q[3] -= remote_j1_max_vel * key_dt;
+        else if (vt03_keys.a) target_q[3] += remote_j1_max_vel * key_dt;
+
+        if (vt03_keys.s && vt03_keys.shift) target_q[4] -= remote_j1_max_vel * key_dt;
+        else if (vt03_keys.s) target_q[4] += remote_j1_max_vel * key_dt;
+
+        if (vt03_keys.d && vt03_keys.shift) target_q[5] -= remote_j1_max_vel * key_dt;
+        else if (vt03_keys.d) target_q[5] += remote_j1_max_vel * key_dt;
+
+        if (vt03_keys.q && vt03_keys.shift) target_q[6] -= remote_j1_max_vel * key_dt;
+        else if (vt03_keys.q) target_q[6] += remote_j1_max_vel * key_dt;
+
+        if (vt03_keys.w && vt03_keys.shift) target_q[7] -= remote_j1_max_vel * key_dt;
+        else if (vt03_keys.w) target_q[7] += remote_j1_max_vel * key_dt;
+
+        if (vt03_keys.e && vt03_keys.shift) target_q[8] -= remote_j1_max_vel * key_dt;
+        else if (vt03_keys.e) target_q[8] += remote_j1_max_vel * key_dt;
+
 
         xSemaphoreGive(RefereeMutexHandle);
     }
@@ -55,8 +71,6 @@ static void Update_Arm_Key_Control(void)
 /************************************Task**************************************/
 void App_StateMachineTask(void const * argument){
     while (1){
-        if (vt03_keys.z) gripper_pos = -0.2f;
-        if (vt03_keys.x) gripper_pos = 0.38f;
         Update_Arm_Key_Control();
         osDelay(1);
     }

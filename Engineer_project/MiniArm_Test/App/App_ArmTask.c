@@ -50,8 +50,8 @@ extern float joint_torque[9];
 extern Gravity_identificationInstance_s* link_gravity_identification;
 /* AlgTask 共享变量 */
 /************************************Private_variable**************************************/
-int arm_sign[9] = {1,1,1,1,1,1,1,1,1};
-float arm_bias[9]={0,0,0,0,0,0,0,0,0};
+int arm_sign[9] = {1,1,1,1,-1,-1,1,1,-1};
+float arm_bias[9]={0,0.3f,1.57f,0,0,0,0,0,0};
 bool arm_custom_enable[9] ={1,1,1,1,1,1,1,1,1};
 
 static uint64_t last_arm_mode = UINT64_MAX;
@@ -59,10 +59,9 @@ static uint32_t custom_entry_seq = 0;
 static bool custom_target_active = false;
 
 static const float startup_target_q[9] = {
-    -0.2f, 0.f, 1.9f,
+    -0.2f, 0.6f, 1.9f,
     1.62f, -2.02f, -0.67f,
-    0.f, 0.8f, 0.f,
-};
+    0.f, 0.8f, 0.f,};
 static float hold_target_q[9] = {};
 static float custom_target_q[9] = {};
 
@@ -70,7 +69,10 @@ extern volatile uint32_t custom_target_seq;
 
 static float torque[9] = {};
 static float qd[9] = {};
-static float arm_target_q[9] = {-1.53f, 0, 1.2f, 1.2f, 1.f, 1.f, 0.5f, 0.f, 0.0f};
+static float arm_target_q[9] = {
+    -0.2f, 0.6f, 1.9f,
+    1.62f, -2.02f, -0.67f,
+    0.f, 0.8f, 0.f,};
 static float remote_target_q[9] = {};
 
 /************************************Private_functions**************************************/
@@ -274,7 +276,6 @@ void App_ArmTask(void const * argument){
                 break;
             case 1:
             Arm_Run_Planned_Target(hold_target_q);
-
             Motor_Dm_Mit_Control(motor_gripper, gripper_pos, 2.f, -0.5f);
 #ifdef CAN_TRANSMIT
             Motor_Dm_Transmit(motor_gripper);
@@ -283,8 +284,8 @@ void App_ArmTask(void const * argument){
             //执行自定义控制器指令
             case 2:
                 if (xSemaphoreTake(RefereeMutexHandle, 0) == pdTRUE) {
-                    if (referee_instance->custom_robot_data_valid &&
-                        custom_target_seq != custom_entry_seq) {
+                    // if (referee_instance->custom_robot_data_valid &&
+                    //     custom_target_seq != custom_entry_seq) {
                         for (int i = 0; i < 9; i++){
                             if (arm_custom_enable[i] == 1){
                                 arm_target_q[i] = arm_sign[i] * target_q[i] + arm_bias[i];
@@ -292,7 +293,7 @@ void App_ArmTask(void const * argument){
                         }
                         custom_entry_seq = custom_target_seq;
                         custom_target_active = true;
-                    }
+                    // }
                     xSemaphoreGive(RefereeMutexHandle);
                 }
                 Arm_Run_Planned_Target(arm_target_q);

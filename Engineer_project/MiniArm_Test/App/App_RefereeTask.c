@@ -57,7 +57,10 @@ RefereeInitConfig_s referee_config = {
 #endif
 };
 //自定义控制器部分
-float target_q[9] = {-1.53f, 0, 1.2f, 1.2f, 1.f, 1.f, 0.5f, 0.f, 0.f};  //收到自定义控制器的位姿  j1和j5需要加负号由于自定义控制器与大臂的安装关系
+float target_q[9] = {
+    -0.2f, 0.6f, 1.9f,
+    1.62f, 2.02f, 0.67f,
+    0.f, 0.8f, 0.f,};  //收到自定义控制器的位姿  j1和j5需要加负号由于自定义控制器与大臂的安装关系
 uint16_t finger[2] = {}; // 手套手指位姿
 static uint32_t last_custom_robot_update_time = 0;
 static bool custom_robot_data_copied = false;
