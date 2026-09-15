@@ -50,7 +50,7 @@ extern float joint_torque[9];
 extern Gravity_identificationInstance_s* link_gravity_identification;
 /* AlgTask 共享变量 */
 /************************************Private_variable**************************************/
-int arm_sign[9] = {1,1,1,1,-1,-1,1,1,-1};
+int arm_sign[9] = {1,1,1,1,1,-1,1,1,1};
 float arm_bias[9]={0,0.3f,1.57f,0,0,0,0,0,0};
 bool arm_custom_enable[9] ={1,1,1,1,1,1,1,1,1};
 
@@ -71,7 +71,7 @@ static float torque[9] = {};
 static float qd[9] = {};
 static float arm_target_q[9] = {
     -0.2f, 0.6f, 1.9f,
-    1.62f, -2.02f, -0.67f,
+    1.62f, 2.02f, -0.67f,
     0.f, 0.8f, 0.f,};
 static float remote_target_q[9] = {};
 
