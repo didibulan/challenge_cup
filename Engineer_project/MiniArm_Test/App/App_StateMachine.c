@@ -33,8 +33,8 @@ static void Update_Arm_Key_Control(void)
     if (vt03_keys.z) gripper_pos = -0.2f;
     if (vt03_keys.x) gripper_pos = 0.38f;
     if (xSemaphoreTake(RefereeMutexHandle, 0) == pdTRUE) {
-        if (vt03_keys.c && vt03_keys.shift) target_q[0] -= remote_j0_max_vel * key_dt;
-        else if (vt03_keys.c) target_q[0] += remote_j0_max_vel * key_dt;
+        if (vt03_keys.c && vt03_keys.shift) target_q[1] -= remote_j1_max_vel * key_dt;
+        else if (vt03_keys.c) target_q[1] += remote_j1_max_vel * key_dt;
 
         if (vt03_keys.v && vt03_keys.shift) target_q[1] -= remote_j1_max_vel * key_dt;
         else if (vt03_keys.v) target_q[1] += remote_j1_max_vel * key_dt;

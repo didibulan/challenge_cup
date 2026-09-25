@@ -221,7 +221,7 @@ DmMotorInitConfig_s arm_motor4_config = {
         .vel_max = 30,
         .tor_max = 10,
         .kd_int = 0.5f,
-        .kp_int = 5.8f,
+        .kp_int = 60.f,
         .kd_max = 3.0f,
         .kp_max = 500.0f,
     },

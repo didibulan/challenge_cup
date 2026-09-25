@@ -50,8 +50,8 @@ extern float joint_torque[9];
 extern Gravity_identificationInstance_s* link_gravity_identification;
 /* AlgTask 共享变量 */
 /************************************Private_variable**************************************/
-int arm_sign[9] = {1,1,1,1,1,-1,1,1,1};
-float arm_bias[9]={0,0.3f,1.57f,0,0,0,0,0,0};
+float arm_sign[9] = {1,1,1.f,-1,0,-1,1,-1,1};
+float arm_bias[9]={0,0.3f,3.14f,0,0,0,0,0,0};
 bool arm_custom_enable[9] ={1,1,1,1,1,1,1,1,1};
 
 static uint64_t last_arm_mode = UINT64_MAX;
@@ -59,7 +59,7 @@ static uint32_t custom_entry_seq = 0;
 static bool custom_target_active = false;
 
 static const float startup_target_q[9] = {
-    -0.2f, 0.6f, 1.9f,
+    -0.2f, 0.3f, 1.9f,
     1.62f, -2.02f, -0.67f,
     0.f, 0.8f, 0.f,};
 static float hold_target_q[9] = {};
@@ -70,8 +70,8 @@ extern volatile uint32_t custom_target_seq;
 static float torque[9] = {};
 static float qd[9] = {};
 static float arm_target_q[9] = {
-    -0.2f, 0.6f, 1.9f,
-    1.62f, 2.02f, -0.67f,
+    -0.2f, 0.3f, 1.9f,
+    1.62f, -2.02f, -0.67f,
     0.f, 0.8f, 0.f,};
 static float remote_target_q[9] = {};
 
@@ -120,6 +120,8 @@ static BaseType_t ZeroPoint_Mark(DmMotorInstance_s *motor_joint_x){
 
 /************************************Private_init**************************************/
 
+
+float test_pos[9] = {};
 /************************************Public_functions**************************************/
 static void Arm_Run_Planned_Target(float target[9])
 {
@@ -129,6 +131,7 @@ static void Arm_Run_Planned_Target(float target[9])
     Extract_Trajectory_Params(motorjoints_limit, target);
     for (uint8_t i = 0; i < 9; i++) {
         float pos = Planning_OutputCmdPos(i, motorjoints_limit[i]->pos);
+        test_pos[i] = pos;000000000000000000000000
         float vel = motorjoints_limit[i]->vel;
         Motor_Dm_Mit_Control(
             arm_motors[i],
@@ -161,7 +164,7 @@ void App_ArmTask(void const * argument){
 
 #ifdef ZERO_POINT_MARK
     // ZeroPoint_Mark(motor_gripper);
-    ZeroPoint_Mark(arm_motors[1]);
+    ZeroPoint_Mark(arm_motors[7]);
 
     while (1){
         for (uint8_t i = 0; i < 9; i++){
@@ -287,9 +290,16 @@ void App_ArmTask(void const * argument){
                     // if (referee_instance->custom_robot_data_valid &&
                     //     custom_target_seq != custom_entry_seq) {
                         for (int i = 0; i < 9; i++){
-                            if (arm_custom_enable[i] == 1){
+                            if (i == 4) arm_target_q[i] = 0.5f;
+                            else if (i == 1) arm_target_q[i] = 0.3f;
+                            // else if (i == 7)arm_target_q [i]= 0.f;
+                            else
+                            {
+                                if (arm_custom_enable[i] == 1){
                                 arm_target_q[i] = arm_sign[i] * target_q[i] + arm_bias[i];
+                                }
                             }
+
                         }
                         custom_entry_seq = custom_target_seq;
                         custom_target_active = true;
