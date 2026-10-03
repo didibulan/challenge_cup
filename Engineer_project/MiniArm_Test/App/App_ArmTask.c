@@ -131,7 +131,7 @@ static void Arm_Run_Planned_Target(float target[9])
     Extract_Trajectory_Params(motorjoints_limit, target);
     for (uint8_t i = 0; i < 9; i++) {
         float pos = Planning_OutputCmdPos(i, motorjoints_limit[i]->pos);
-        test_pos[i] = pos;000000000000000000000000
+        test_pos[i] = pos;
         float vel = motorjoints_limit[i]->vel;
         Motor_Dm_Mit_Control(
             arm_motors[i],
