@@ -9,6 +9,7 @@
 #include "App_CommTask.h"
 #include "dev_motor_dm.h"
 #include "dev_motor_dji.h"
+#include "dev_motor_rs.h"
 #include "robot_config.h"
 #include "dev_planning.h"
 /************************************宏定义**************************************/

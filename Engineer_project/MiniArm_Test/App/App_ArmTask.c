@@ -19,9 +19,9 @@
 //是否开启程序全阻塞
 // #define BLANK_FUNCTION
 //是否开启循环使能
-// #define CIRCULAR_ENABLE
+//#define CIRCULAR_ENABLE
 //是否开启通信
-#define CAN_TRANSMIT
+ #define CAN_TRANSMIT
 /************************************extern_variable**************************************/
 extern osMutexId RoboticAlgMutexHandle;
 extern osMutexId RefereeMutexHandle;
@@ -31,7 +31,8 @@ bool is_VT03_connected = false;
 bool is_vt03Update = false;
 
 extern float gripper_pos;
-extern DmMotorInstance_s* motor_gripper;
+extern RsMotorInstance_s* motor_new_gripper;
+//extern DmMotorInstance_s* motor_gripper;
 extern DmMotorInstance_s* arm_motors[9];
 extern JointLimitInstance_s *motorjoints_limit[9];
 float planned_q[9] = {};
@@ -86,7 +87,18 @@ static BaseType_t Enable_Arm_Motors(DmMotorInstance_s *motor_joint_x){
     }while (motor_joint_x->motor_state == DM_DISABLE);
     return pdTRUE;
 }
-
+static BaseType_t Enable_Gripper_Motors(RsMotorInstance_s *motor_gripper)
+{
+  uint8_t retry = 0;
+  do
+  {
+    Motor_RS_Enable(motor_gripper);
+    Motor_RS_Transmit(motor_gripper);
+    osDelay(1);
+    if (++retry > 100) return pdFALSE;
+  }while (motor_gripper->motor_state == DM_DISABLE);
+  return pdTRUE;
+}
 static bool Arm_Feedback_Ready(void){
     for (uint8_t i = 0; i < 9; i++) {
         if (arm_motors[i] == NULL ||
@@ -153,7 +165,8 @@ void App_ArmTask(void const * argument){
 
 #ifdef CIRCULAR_ENABLE
     while (1){
-        Enable_Arm_Motors(motor_gripper);
+        //Enable_Arm_Motors(motor_gripper);
+        Enable_Gripper_Motors(motor_new_gripper);
         osDelay(1);
         for (uint8_t i = 0; i < 9; i++){
         Enable_Arm_Motors(arm_motors[i]);
@@ -173,25 +186,29 @@ void App_ArmTask(void const * argument){
         }
     }
 #endif
-    do{
-        Enable_Arm_Motors(motor_gripper);
+    // do{
+    //     Enable_Arm_Motors(motor_gripper);
+    //     osDelay(1);
+    // }while (motor_gripper->motor_state == DM_DISABLE);
+      do
+     {
+        Enable_Gripper_Motors(motor_new_gripper);
         osDelay(1);
-    }while (motor_gripper->motor_state == DM_DISABLE);
-
+     }while (motor_new_gripper->motor_state == RS_DISABLE);
     for (uint8_t i = 0; i < 9; i++){
-        Enable_Arm_Motors(arm_motors[i]);
-        osDelay(1);
+      Enable_Arm_Motors(arm_motors[i]);
+      osDelay(1);
     }
 
-    // while (!Arm_Feedback_Ready()) {
-    //     osDelay(1);
-    // }
+    // // while (!Arm_Feedback_Ready()) {
+    // //     osDelay(1);
+    // // }
 
-    osDelay(10);
+     osDelay(10);
 
-    // 用使能后的实际电机反馈初始化轨迹规划器，避免首次进入自定义模式时从零位规划。
-    for (uint8_t i = 0; i < 9; i++) {
-        q[i] = arm_motors[i]->message.out_position;
+     // 用使能后的实际电机反馈初始化轨迹规划器，避免首次进入自定义模式时从零位规划。
+     for (uint8_t i = 0; i < 9; i++) {
+         q[i] = arm_motors[i]->message.out_position;
     }
     memcpy(remote_target_q, q, sizeof(remote_target_q));
     Arm_Initplanning(motorjoints_limit);
@@ -202,9 +219,13 @@ void App_ArmTask(void const * argument){
         osDelay(1);
     }
 
-    Motor_Dm_Mit_Control(motor_gripper, gripper_pos, 2.f, -0.5f);
+    // Motor_Dm_Mit_Control(motor_gripper, gripper_pos, 2.f, -0.5f);
+    Motor_RS_Control(motor_new_gripper, gripper_pos);
+    Motor_RS_Mit_Control(motor_new_gripper,0.0f,0.0f,0.0f,0.0f,motor_new_gripper->output);//这里仿照26赛季armMC02
+  
 #ifdef CAN_TRANSMIT
-    Motor_Dm_Transmit(motor_gripper);
+    //Motor_DM_Transmit(motor_gripper);
+    Motor_RS_Transmit(motor_new_gripper);
 #endif
 #ifdef LINK_GRAVITY_DYNAMICS_IDENTIFICATION
     while (1){
@@ -272,16 +293,22 @@ void App_ArmTask(void const * argument){
             case 0:default:
             Arm_Run_Planned_Target(remote_target_q);
 
-            Motor_Dm_Mit_Control(motor_gripper, gripper_pos, 2.f, -0.5f);
+            // Motor_Dm_Mit_Control(motor_gripper, gripper_pos, 2.f, -0.5f);
+          Motor_RS_Control(motor_new_gripper, gripper_pos);
+          Motor_RS_Mit_Control(motor_new_gripper,0.0f,0.0f,0.0f,0.0f,motor_new_gripper->output);
 #ifdef CAN_TRANSMIT
-            Motor_Dm_Transmit(motor_gripper);
+            //Motor_Dm_Transmit(motor_gripper);
+          Motor_RS_Transmit(motor_new_gripper);
 #endif
                 break;
             case 1:
             Arm_Run_Planned_Target(hold_target_q);
-            Motor_Dm_Mit_Control(motor_gripper, gripper_pos, 2.f, -0.5f);
+            //Motor_Dm_Mit_Control(motor_gripper, gripper_pos, 2.f, -0.5f);
+          Motor_RS_Control(motor_new_gripper, gripper_pos);
+          Motor_RS_Mit_Control(motor_new_gripper,0.0f,0.0f,0.0f,0.0f,motor_new_gripper->output);
 #ifdef CAN_TRANSMIT
-            Motor_Dm_Transmit(motor_gripper);
+            //Motor_Dm_Transmit(motor_gripper);
+          Motor_RS_Transmit(motor_new_gripper);
 #endif
                 break;
             //执行自定义控制器指令
@@ -308,9 +335,12 @@ void App_ArmTask(void const * argument){
                 }
                 Arm_Run_Planned_Target(arm_target_q);
 
-                Motor_Dm_Mit_Control(motor_gripper, gripper_pos, 2.f, -0.5f);
+                //Motor_Dm_Mit_Control(motor_gripper, gripper_pos, 2.f, -0.5f);
+          Motor_RS_Control(motor_new_gripper, gripper_pos);
+          Motor_RS_Mit_Control(motor_new_gripper,0.0f,0.0f,0.0f,0.0f,motor_new_gripper->output);
     #ifdef CAN_TRANSMIT
-                Motor_Dm_Transmit(motor_gripper);
+                //Motor_Dm_Transmit(motor_gripper);
+                Motor_RS_Transmit(motor_new_gripper);
     #endif
                 break;
         }

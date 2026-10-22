@@ -80,6 +80,7 @@ add_executable(${CMAKE_PROJECT_NAME}
         Phoenix_Lib/Bsp/Log/bsp_log.c
         UserLib/WS2812/dev_ws2812.h
         Phoenix_Lib/Module/Motor/Dm/dev_motor_dm.c
+        Phoenix_Lib/Module/Motor/RobStride/dev_motor_rs.c
         Phoenix_Lib/Algorithm/Pid/alg_pid.c
         Phoenix_Lib/Module/SEGGER/Jlink_RTT/SEGGER_RTT_printf.c
         Phoenix_Lib/Module/SEGGER/Jlink_RTT/SEGGER_RTT.c
