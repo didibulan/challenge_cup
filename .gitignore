@@ -1,0 +1,16 @@
+**build**
+**.idea**
+**cmake-build-debug**
+**.pio**
+**.vscode**
+**.cache**
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.venv/
+**/.python-version
+.conda_envs/
+**/results/**
+**/TestData/**
