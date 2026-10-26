@@ -9,8 +9,8 @@
 /************************************extern_variable**************************************/
 
 /************************************Private_variable**************************************/
-static QuinticPlanState_s quintic_state[9] = {0};
-static float last_target_q[9] = {0};
+static QuinticPlanState_s quintic_state[9] = {0};//保存九轴这条五次曲线的公式、时间和内部计算状态。
+static float last_target_q[9] = {0};//记住上一回规划时使用的目标，方便判断目标变了没有。
 static const float k_replan_eps = 1e-4f;
 static const float k_min_plan_T = 0.05f;
 static const float k_nominal_target_period = 0.04f; // 25Hz

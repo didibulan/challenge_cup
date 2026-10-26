@@ -165,28 +165,59 @@ static void Referee_Uart_DMA_Callback(UartInstance_s* instance)
 
     // Log_Debug("Callback Trigger, rx_size = %d", instance->rx_size);
     //消费数据
-    //如果长度=21则检验是否为vt03数据
-    if (instance->rx_size ==21)
+    // 2026-10-23: 注释掉VT03检测（21字节，0xA9 0x53帧头）
+    // if (instance->rx_size ==21)
+    // {
+    //     //判断帧头
+    //     if (ref_rx_Buffer[ready_rx_buff][0] == 0xA9 && ref_rx_Buffer[ready_rx_buff][1] == 0x53)
+    //     {
+    //        if (CRC16_Verify(ref_rx_Buffer[ready_rx_buff],21))
+    //        {
+    //            memcpy(&((RefereeInstance_s*)instance->id)->vt03_data,ref_rx_Buffer[ready_rx_buff],21);
+    //            ((RefereeInstance_s*)instance->id)->Referee_Data_TF = true;
+    //            Log("Get VT03 msg");
+    //            vt03_cnt++;
+    //            return;
+    //        }
+    //     }
+    // }
+
+    if (instance->rx_size == 18)
     {
-        //判断帧头
-        if (ref_rx_Buffer[ready_rx_buff][0] == 0xA9 && ref_rx_Buffer[ready_rx_buff][1] == 0x53)
+        if (ref_rx_Buffer[ready_rx_buff][0] == 0xA5)  // VT02帧头
         {
-           if (CRC16_Verify(ref_rx_Buffer[ready_rx_buff],21))
+           if (CRC16_Verify(ref_rx_Buffer[ready_rx_buff], 18))
            {
-               memcpy(&((RefereeInstance_s*)instance->id)->vt03_data,ref_rx_Buffer[ready_rx_buff],21);
+               memcpy(&((RefereeInstance_s*)instance->id)->vt02_data, ref_rx_Buffer[ready_rx_buff], 18);
                ((RefereeInstance_s*)instance->id)->Referee_Data_TF = true;
-               Log("Get VT03 msg");
+               uint16_t key_val = ((RefereeInstance_s*)instance->id)->vt02_data.key;
+               Log("Get VT02 msg, key=0x%04X", key_val);
                vt03_cnt++;
                return;
            }
+           else {
+               Log_Warning("VT02 CRC check failed");
+           }
+        }
+        else {
+            Log_Warning("rx_size=18 but SOF!=0xA5, got 0x%02X", ref_rx_Buffer[ready_rx_buff][0]);
         }
     }
 
-    //如果长度不是21但帧头是vt03则检查vt03后面有没有粘包裁判系统数据
-    if (ref_rx_Buffer[ready_rx_buff][0] == 0xA9 && ref_rx_Buffer[ready_rx_buff][1] == 0x53) {
-        if (instance->rx_size >21 && ref_rx_Buffer[ready_rx_buff][21] == REF_HEADER_SOF) {
-            for (int i = 21; i < instance->rx_size; i++){
-                Referee_Uart_Handle_One_Byte(((RefereeInstance_s*)instance->id),ref_rx_Buffer[ready_rx_buff][i]);
+    // 2026-10-23: 注释掉VT03粘包处理
+    // if (ref_rx_Buffer[ready_rx_buff][0] == 0xA9 && ref_rx_Buffer[ready_rx_buff][1] == 0x53) {
+    //     if (instance->rx_size >21 && ref_rx_Buffer[ready_rx_buff][21] == REF_HEADER_SOF) {
+    //         for (int i = 21; i < instance->rx_size; i++){
+    //             Referee_Uart_Handle_One_Byte(((RefereeInstance_s*)instance->id),ref_rx_Buffer[ready_rx_buff][i]);
+    //         }
+    //     }
+    //     return;
+    // }
+
+    if (ref_rx_Buffer[ready_rx_buff][0] == 0xA5 && instance->rx_size >= 18) {
+        if (instance->rx_size > 18 && ref_rx_Buffer[ready_rx_buff][18] == REF_HEADER_SOF) {
+            for (int i = 18; i < instance->rx_size; i++){
+                Referee_Uart_Handle_One_Byte(((RefereeInstance_s*)instance->id), ref_rx_Buffer[ready_rx_buff][i]);
             }
         }
         return;
@@ -202,11 +233,21 @@ static void Referee_Uart_DMA_Callback(UartInstance_s* instance)
     for (int i =0; i < instance->rx_size; i++) {
         // Log_Debug("Processing data %02X , i = %d",ref_rx_Buffer[ready_rx_buff][i], i);
         //收到完整一帧若后续粘包了vt03消息过滤掉
-        if (Referee_Uart_Handle_One_Byte(((RefereeInstance_s*)instance->id),ref_rx_Buffer[ready_rx_buff][i]) == 1)
+        // if (Referee_Uart_Handle_One_Byte(((RefereeInstance_s*)instance->id),ref_rx_Buffer[ready_rx_buff][i]) == 1)
+        // {
+        //     if (i+2 < instance->rx_size && ref_rx_Buffer[ready_rx_buff][i+1] == 0xA9 && ref_rx_Buffer[ready_rx_buff][i+2] == 0x53)
+        //     {
+        //         Log_Warning("Get VT03 msg in the end of referee data");
+        //         return;
+        //     }
+        // }
+
+        // 2026-10-23: 添加VT02末尾粘包过滤
+        if (Referee_Uart_Handle_One_Byte(((RefereeInstance_s*)instance->id), ref_rx_Buffer[ready_rx_buff][i]) == 1)
         {
-            if (i+2 < instance->rx_size && ref_rx_Buffer[ready_rx_buff][i+1] == 0xA9 && ref_rx_Buffer[ready_rx_buff][i+2] == 0x53)
+            if (i+1 < instance->rx_size && ref_rx_Buffer[ready_rx_buff][i+1] == 0xA5)
             {
-                Log_Warning("Get VT03 msg in the end of referee data");
+                Log_Warning("Get VT02 msg in the end of referee data");
                 return;
             }
         }

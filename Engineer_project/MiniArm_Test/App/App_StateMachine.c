@@ -12,21 +12,29 @@
 /************************************宏定义开关**************************************/
 
 /************************************extern_variable**************************************/
-extern VT03_Rx_Message_t vt03_rx_msg;
+// 2026-10-23: 改为VT02声明
+// extern VT03_Rx_Message_t vt03_rx_msg;
+extern VT02_Rx_Message_t vt03_rx_msg;
 extern float target_q[9];
 extern osMutexId RefereeMutexHandle;
+extern uint64_t vt03_Armtask_mode_sw; // 2026-10-23: 添加extern声明（从DT7通过FDCAN获取）
 float gripper_pos = -0.2f;
 /************************************Private_variable**************************************/
 static KeyBoard_t vt03_keys = {};
 static const float key_dt = 0.005f;
 static const float remote_j0_max_vel = 0.3f;
 static const float remote_j1_max_vel = 0.2f;
+
 /************************************Private_functions**************************************/
 static void Update_Arm_Key_Control(void)
 {
     vt03_keys.keys = vt03_rx_msg.key;
 
-    if (vt03_rx_msg.mode_sw != 2) {
+    // 2026-10-23: mode_sw由dt7直接从can3传入
+    // if (vt03_rx_msg.mode_sw != 2) {
+    //     return;
+    // }
+    if (vt03_Armtask_mode_sw != 2) {
         return;
     }
 

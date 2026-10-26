@@ -36,7 +36,7 @@ file(GLOB_RECURSE UserLib_SOURCES
 #        "./UserLib/ChassisCtrl/*.c"
         #        "./User_Lib/Dwt/*.c"
         #        "./User_Lib/UI/*.c"
-        "./UserLib/dev_ws2812/*.c"
+        "./UserLib/WS2812/*.c"
         #        "./User_Lib/Power_Control/*.c"
         #        "./User_Lib/BMI088/Device_BMI088/*.c"
         #        "./User_Lib/BMI088/Alg/EKF/*.c"
@@ -100,6 +100,7 @@ add_executable(${CMAKE_PROJECT_NAME}
         UserLib/Robotics/dev_dynamics_identification.c
         UserLib/Robotics/dev_dynamics_identification.h
         Phoenix_Lib/Bsp/Uart/bsp_uart.c
+        Phoenix_Lib/Module/Dr16/dev_dr16.c
         Phoenix_Lib/Module/Referee/dev_referee.c
         Phoenix_Lib/Algorithm/Crc/alg_crc.c
         Phoenix_Lib/Module/Daemon/dev_daemon.c)
@@ -126,16 +127,8 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
         ./UserLib/Dwt
         ./UserLib/Robotics
         ./UserLib/C_Robotics
-        ./UserLib/UserRobtics
-        ./UserLib/MiniPC
         ./UserLib/Planning
-        ./UserLib/Compliance
-        ./UserLib/IntraBoards_Comm
         ./UserLib/WS2812
-        ./UserLib/BMI088/Device_BMI088
-        ./UserLib/BMI088/Alg/EKF
-        ./UserLib/BMI088/Alg/kalman
-        ./UserLib/BMI088/Alg/IMU_PID
         ./Phoenix_Lib/Module/SEGGER/
         ./Phoenix_Lib/Module/SEGGER/Jlink_RTT/
         ./Phoenix_Lib/Algorithm/Pid/
@@ -167,4 +160,16 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     # Add user defined libraries
 )
 
-target_link_libraries(${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/Middlewares/ST/ARM/DSP/Lib/GCC/libarm_cortexM7lfsp_math.a)
+# GNU Arm ld may fail to open libraries whose absolute path contains non-ASCII
+# characters. Copy CMSIS-DSP to the ASCII-only Windows temporary directory and
+# link that copy instead. The source archive remains in the repository.
+set(CMSIS_DSP_SOURCE
+    "${CMAKE_SOURCE_DIR}/Middlewares/ST/ARM/DSP/Lib/GCC/libarm_cortexM7lfsp_math.a")
+set(CMSIS_DSP_TEMP_DIR "$ENV{TEMP}/MiniArm_Test")
+set(CMSIS_DSP_TEMP_LIB "${CMSIS_DSP_TEMP_DIR}/libarm_cortexM7lfsp_math.a")
+if(NOT EXISTS "${CMSIS_DSP_SOURCE}")
+    message(FATAL_ERROR "CMSIS-DSP library not found: ${CMSIS_DSP_SOURCE}")
+endif()
+file(MAKE_DIRECTORY "${CMSIS_DSP_TEMP_DIR}")
+configure_file("${CMSIS_DSP_SOURCE}" "${CMSIS_DSP_TEMP_LIB}" COPYONLY)
+target_link_libraries(${PROJECT_NAME} "${CMSIS_DSP_TEMP_LIB}")

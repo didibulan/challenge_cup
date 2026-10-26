@@ -78,12 +78,22 @@ void App_RefereeTask(void const * argument)
         osDelay(1);
     }
 
-    memset(&referee_instance->vt03_data, 0 , sizeof(VT03_Rx_Message_t)); // 防止随机值干扰
-    referee_instance->vt03_data.mode_sw = 0;
-    referee_instance->vt03_data.ch_0 = 1024;
-    referee_instance->vt03_data.ch_1 = 1024;
-    referee_instance->vt03_data.ch_2 = 1024;
-    referee_instance->vt03_data.ch_3 = 1024;
+    // 2026-10-23: 改为VT02初始化
+    // memset(&referee_instance->vt03_data, 0 , sizeof(VT03_Rx_Message_t)); // 防止随机值干扰
+    // referee_instance->vt03_data.mode_sw = 0;
+    // referee_instance->vt03_data.ch_0 = 1024;
+    // referee_instance->vt03_data.ch_1 = 1024;
+    // referee_instance->vt03_data.ch_2 = 1024;
+    // referee_instance->vt03_data.ch_3 = 1024;
+
+    // 2026-10-23: 添加VT02初始化
+    memset(&referee_instance->vt02_data, 0, sizeof(VT02_Rx_Message_t)); // 防止随机值干扰
+    referee_instance->vt02_data.s1 = 1;      // 默认档位1
+    referee_instance->vt02_data.s2 = 1;
+    referee_instance->vt02_data.ch_0 = 0;    // VT02中位是0
+    referee_instance->vt02_data.ch_1 = 0;
+    referee_instance->vt02_data.ch_2 = 0;
+    referee_instance->vt02_data.ch_3 = 0;
 
     if (referee_instance == NULL)
     {
@@ -94,15 +104,32 @@ void App_RefereeTask(void const * argument)
         if (referee_instance->Referee_Data_TF == true){
             is_enable = true;
             is_vt03Update = true;
-            if (referee_instance->vt03_data.mode_sw != 0)
+            // 2026-10-23: 注释掉VT03的mode_sw读取，VT02已由DT7接管
+            // if (referee_instance->vt03_data.mode_sw != 0)
+            // {
+            //     is_VT03_connected = true;
+            //     // 2026-10-23: VT03继续提供键盘/图传数据；机械臂模式改由DT7左上拨杆设置。
+            //     // vt03_Armtask_mode_sw = referee_instance->vt03_data.mode_sw;
+            // }
+            // else {
+            //     is_VT03_connected = false;
+            //     // 2026-10-23: 保留旧VT13经VT03转发的模式来源，改成dt7
+            //     // vt03_Armtask_mode_sw = 0;
+            // }
+
+            // 2026-10-23: VT02连接检测
+            if (referee_instance->vt02_data.key != 0)
             {
                 is_VT03_connected = true;
-                vt03_Armtask_mode_sw = referee_instance->vt03_data.mode_sw;
+                static uint32_t key_print_cnt = 0;
+                if (++key_print_cnt % 500 == 0) {
+                    Log("VT02 connected, key=0x%04X", referee_instance->vt02_data.key);
+                }
             }
             else {
                 is_VT03_connected = false;
-                vt03_Armtask_mode_sw = 0;
             }
+
             // 填充J2~J7的7个joint和finger数据
             if (xSemaphoreTake(RefereeMutexHandle, 0) == pdTRUE)
             {
@@ -129,13 +156,17 @@ void App_RefereeTask(void const * argument)
                 }
                 xSemaphoreGive(RefereeMutexHandle);
             }
-            memcpy(&vt03_rx_msg,&referee_instance->vt03_data,sizeof(VT03_Rx_Message_t));
+            // 2026-10-23: 新数据拷贝
+            // memcpy(&vt03_rx_msg,&referee_instance->vt03_data,sizeof(VT03_Rx_Message_t));
+            memcpy(&vt03_rx_msg, &referee_instance->vt02_data, sizeof(VT02_Rx_Message_t));
         }else{
             is_enable = false;
             is_vt03Update = true;
             is_VT03_connected = false;
-            vt03_Armtask_mode_sw = 0;
-            memcpy(&vt03_rx_msg,&referee_instance->vt03_data,sizeof(VT03_Rx_Message_t));
+            // 2026-10-23: 保留旧VT13模式失联处理；VT03键盘/图传状态仍按原逻辑处理。
+            // vt03_Armtask_mode_sw = 0；
+            // memcpy(&vt03_rx_msg,&referee_instance->vt03_data,sizeof(VT03_Rx_Message_t));
+            memcpy(&vt03_rx_msg, &referee_instance->vt02_data, sizeof(VT02_Rx_Message_t));
         }
 
         // memcpy(&vt03_rx_msg,&referee_instance->vt03_data,sizeof(VT03_Rx_Message_t));

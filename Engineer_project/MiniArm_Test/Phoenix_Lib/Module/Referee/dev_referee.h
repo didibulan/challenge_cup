@@ -126,6 +126,24 @@ typedef struct __attribute__((packed)) VT03_Rx_Message_t_
     uint16_t crc16;
 } VT03_Rx_Message_t;
 
+// 2026-10-23: 添加VT02接收遥控器dt7数据结构体
+typedef struct __attribute__((packed)) {
+    uint8_t sof;            // 0xA5
+    int16_t ch_0;
+    int16_t ch_1;
+    int16_t ch_2;
+    int16_t ch_3;
+    uint8_t s1;
+    uint8_t s2;
+    int16_t mouse_x;
+    int16_t mouse_y;
+    int16_t mouse_z;
+    uint8_t mouse_left;
+    uint8_t mouse_right;
+    uint16_t key;
+    uint16_t crc16;
+} VT02_Rx_Message_t;
+
 typedef struct {
     char *topic_name;
     UART_HandleTypeDef *uart_handle;
@@ -137,7 +155,8 @@ typedef struct {
     char *topic_name;
     UartInstance_s *uart_instance;
     Daemon_Instance_s* daemon_instance;
-    VT03_Rx_Message_t vt03_data;
+    // VT03_Rx_Message_t vt03_data;  // 2026-10-23: 注释掉VT03数据，改用VT02
+    VT02_Rx_Message_t vt02_data;
     Referee_Origin_data_s origin_data;
     bool Referee_Data_TF; //当前裁判系统数据是否就绪
     uint8_t Referee_Self_ID; //当前机器人的ID

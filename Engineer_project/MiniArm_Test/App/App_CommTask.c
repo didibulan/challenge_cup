@@ -9,11 +9,14 @@
 *   @note
 */
 #include "App_CommTask.h"
+#include "dev_dr16.h"
+#include "usart.h"
 /************************************宏定义开关**************************************/
 #define COMM_TRANSMIT
 // #define COMM_DAEMON
 /************************************extern_variable**************************************/
 extern VT03_Rx_Message_t vt03_rx_msg;
+extern uint64_t vt03_Armtask_mode_sw;
 
 extern osMutexId CommMutexHandle;
 
@@ -39,9 +42,12 @@ IntroBoard_Chassis_Msg_s com_rx_msg = {
 };
 /************************************Private_variable**************************************/
 CanInstance_s* IntroBoard_fdcan_instance = NULL;
+static Dr16Instance_s* dt7_instance = NULL;
 Daemon_Instance_s* comm_daemon_instance = NULL;
 //板间通讯守护状态
 static volatile bool is_comm_alive = false;
+static uint16_t dt7_last_rx_cnt = 0;
+static TickType_t dt7_last_rx_tick = 0;
 
 static IntroBoard_Arm_Msg_s tx_msg = {
     .cmd = 0xA0,
@@ -105,6 +111,13 @@ static Daemon_InitConfig_s comm_daemon_config = {
 
 /************************************Task**************************************/
 void App_CommTask(void const * argument){
+    while (dt7_instance == NULL) {
+        dt7_instance = Dr16_Register(&huart5);
+        osDelay(1);
+    }
+    dt7_last_rx_cnt = dt7_instance->uart_instance->rx_cnt;
+    dt7_last_rx_tick = xTaskGetTickCount();
+
     while (IntroBoard_fdcan_instance == NULL){
         IntroBoard_fdcan_instance = Can_Register(&fdcan3_config);
         osDelay(1);
@@ -118,6 +131,12 @@ void App_CommTask(void const * argument){
 #endif
 
     while (1){
+        if (dt7_instance->uart_instance->rx_cnt != dt7_last_rx_cnt) {
+            dt7_last_rx_cnt = dt7_instance->uart_instance->rx_cnt;
+            dt7_last_rx_tick = xTaskGetTickCount();
+        }
+        const bool dt7_online = (xTaskGetTickCount() - dt7_last_rx_tick) < pdMS_TO_TICKS(COMM_TIMEOUT_MS);
+
         if (xSemaphoreTake(CommMutexHandle, 0) == pdTRUE) {
             memcpy(&com_rx_msg, &rx_msg, sizeof(IntroBoard_Chassis_Msg_s));
             xSemaphoreGive(CommMutexHandle);
@@ -129,10 +148,29 @@ void App_CommTask(void const * argument){
 #endif
 
         if (xSemaphoreTake(CommMutexHandle,0) == pdTRUE){
-            com_tx_msg.Chassis_Vel[0] = CHASSIS_VX_MAX * (vt03_rx_msg.ch_1 - 1024) / (660.0f); // 660是遥控器摇杆的最大值
-            com_tx_msg.Chassis_Vel[1] = CHASSIS_VY_MAX * (vt03_rx_msg.ch_0 - 1024) / (660.0f);
-            com_tx_msg.Chassis_Vel[2] = CHASSIS_VW_MAX * (vt03_rx_msg.ch_3 - 1024) / (-660.0f);
-            com_tx_msg.Chassis_Vel[3] = CHASSIS_TRACK_MAX * (vt03_rx_msg.ch_2 - 1024) / (660.0f);
+            // 2026-10-23: 保留旧VT13摇映射，当前使用DT7。
+            // com_tx_msg.Chassis_Vel[0] = CHASSIS_VX_MAX * (vt03_rx_msg.ch_1 - 1024) / 660.0f;
+            // com_tx_msg.Chassis_Vel[1] = CHASSIS_VY_MAX * (vt03_rx_msg.ch_0 - 1024) / 660.0f;
+            // com_tx_msg.Chassis_Vel[2] = CHASSIS_VW_MAX * (vt03_rx_msg.ch_3 - 1024) / -660.0f;
+            // com_tx_msg.Chassis_Vel[3] = CHASSIS_TRACK_MAX * (vt03_rx_msg.ch_2 - 1024) / 660.0f;
+
+            if (dt7_online) {
+                com_tx_msg.Chassis_Vel[0] = CHASSIS_VX_MAX * dt7_instance->dr16_handle.ch1 / 660.0f;
+                com_tx_msg.Chassis_Vel[1] = CHASSIS_VY_MAX * dt7_instance->dr16_handle.ch0 / 660.0f;
+                com_tx_msg.Chassis_Vel[2] = CHASSIS_VW_MAX * dt7_instance->dr16_handle.ch3 / -660.0f;
+                com_tx_msg.Chassis_Vel[3] = CHASSIS_TRACK_MAX * dt7_instance->dr16_handle.ch2 / 660.0f;
+            } else {
+                memset(com_tx_msg.Chassis_Vel, 0, sizeof(com_tx_msg.Chassis_Vel));
+            }
+
+            // 2026-10-23: 目标映射为上=预设(0)、中=保持(1)、下=自定义控制器(2)。
+            // 非法/失联值回到保持档。
+            switch (dt7_online ? dt7_instance->dr16_handle.s1 : 0) {
+                case 1: vt03_Armtask_mode_sw = 0; break;
+                case 3: vt03_Armtask_mode_sw = 1; break;
+                case 2: vt03_Armtask_mode_sw = 2; break;
+                default: vt03_Armtask_mode_sw = 1; break;
+            }
 
             memcpy(&tx_msg, &com_tx_msg, sizeof(IntroBoard_Arm_Msg_s));
             xSemaphoreGive(CommMutexHandle);
