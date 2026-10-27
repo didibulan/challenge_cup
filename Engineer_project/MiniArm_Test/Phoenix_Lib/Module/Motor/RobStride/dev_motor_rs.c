@@ -48,7 +48,7 @@ void Motor_Rs_Decode(CanInstance_s *can_instance) {
     else if (motor->message.raw_position > 3*M_PI) motor->message.position = motor->message.raw_position - 4*M_PI;
     else if (motor->message.raw_position < -3*M_PI) motor->message.position = motor->message.raw_position + 4*M_PI;
     else motor->message.position = motor->message.raw_position;
-
+  
     motor->message.velocity = -uint16_to_float(motor->message.raw_velocity, V_MIN, V_MAX, 12);
     motor->message.torque = -uint16_to_float(motor->message.raw_torque, T_MIN, T_MAX, 12);
 }

@@ -23,9 +23,11 @@ RsMotorInitConfig_s motor_new_gripper_config =
   .type = EL_05,
   .control_mode = RS_POSITION,
   .can_config = {
+    .fdcan_mode = CAN_STANDARD_MODE,
+    .DLC = FDCAN_DLC_BYTES_32,
     .can_number = 2,
-    .tx_id = ,
-    .rx_id = ,
+    .tx_id = 0x0A,
+    .rx_id = 0x1A,
   },
 
   .velocity_pid_config = {

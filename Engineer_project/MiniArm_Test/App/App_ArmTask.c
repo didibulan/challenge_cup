@@ -13,7 +13,10 @@
 #include "Alg_Task.h"
 #include "dev_planning.h"
 #include "dev_referee.h"
+#include "../Phoenix_Lib/Module/Motor/RobStride/dev_motor_rs.h"
 /************************************宏定义开关**************************************/
+//是否开启夹爪电机零点标定
+//#define GRIPPER_ZERO_MARK
 //是否开启零点标定
 // #define ZERO_POINT_MARK
 //是否开启程序全阻塞
@@ -54,7 +57,10 @@ extern Gravity_identificationInstance_s* link_gravity_identification;
 float arm_sign[9] = {1,1,1.f,-1,0,-1,1,-1,1};
 float arm_bias[9]={0,0.3f,3.14f,0,0,0,0,0,0};
 bool arm_custom_enable[9] ={1,1,1,1,1,1,1,1,1};
-
+//以下是测试变量 可以删除
+volatile uint8_t gripper_zero_request = 1;
+volatile bool gripper_zero_tx_ok = false;
+//以上是测试变量 可删除
 static uint64_t last_arm_mode = UINT64_MAX;
 static uint32_t custom_entry_seq = 0;
 static bool custom_target_active = false;
@@ -77,6 +83,19 @@ static float arm_target_q[9] = {
 static float remote_target_q[9] = {};
 
 /************************************Private_functions**************************************/
+static bool gripper_setzero(RsMotorInstance_s *motor)
+{
+  if (motor == NULL || motor->can_instance == NULL) {
+    return false;
+  }
+  const uint8_t zero_cmd[8] = {
+    0xFF, 0xFF, 0xFF, 0xFF,
+    0xFF, 0xFF, 0xFF, 0xFE
+};
+  memcpy(motor->can_instance->tx_buff,zero_cmd,sizeof(zero_cmd));
+  bool result = Motor_RS_Transmit(motor);
+  return result;
+}
 static BaseType_t Enable_Arm_Motors(DmMotorInstance_s *motor_joint_x){
     uint8_t retry = 0;
     do{
@@ -86,18 +105,6 @@ static BaseType_t Enable_Arm_Motors(DmMotorInstance_s *motor_joint_x){
         if (++retry > 100) return pdFALSE;
     }while (motor_joint_x->motor_state == DM_DISABLE);
     return pdTRUE;
-}
-static BaseType_t Enable_Gripper_Motors(RsMotorInstance_s *motor_gripper)
-{
-  uint8_t retry = 0;
-  do
-  {
-    Motor_RS_Enable(motor_gripper);
-    Motor_RS_Transmit(motor_gripper);
-    osDelay(1);
-    if (++retry > 100) return pdFALSE;
-  }while (motor_gripper->motor_state == DM_DISABLE);
-  return pdTRUE;
 }
 static bool Arm_Feedback_Ready(void){
     for (uint8_t i = 0; i < 9; i++) {
@@ -164,21 +171,33 @@ void App_ArmTask(void const * argument){
 #endif
 
 #ifdef CIRCULAR_ENABLE
-    while (1){
-        //Enable_Arm_Motors(motor_gripper);
-        Enable_Gripper_Motors(motor_new_gripper);
-        osDelay(1);
-        for (uint8_t i = 0; i < 9; i++){
-        Enable_Arm_Motors(arm_motors[i]);
-        osDelay(2);
-        }
-    }
+    // while (1){
+    //     //Enable_Arm_Motors(motor_gripper);
+    //      Motor_RS_Enable(motor_new_gripper);
+    //      Motor_RS_Transmit(motor_new_gripper);
+    //      osDelay(1);
+    //      for (uint8_t i = 0; i < 9; i++){
+    //        Enable_Arm_Motors(arm_motors[i]);
+    //        osDelay(2);
+    //       }
+      /*
+       *夹爪电机测试
+       */
+      // while (1) {
+      //   // 零力矩控制
+      //   Motor_RS_Mit_Control(motor_new_gripper, 0, 0, 0, 0, 0);
+      //   Motor_RS_Transmit(motor_new_gripper);
+      //   osDelay(10);
+      //
+      //   Motor_RS_Enable(motor_new_gripper);
+      //   Motor_RS_Transmit(motor_new_gripper);
+      //   osDelay(20);
+      // }
 #endif
 
 #ifdef ZERO_POINT_MARK
     // ZeroPoint_Mark(motor_gripper);
     ZeroPoint_Mark(arm_motors[7]);
-
     while (1){
         for (uint8_t i = 0; i < 9; i++){
             Enable_Arm_Motors(arm_motors[i]);
@@ -186,15 +205,26 @@ void App_ArmTask(void const * argument){
         }
     }
 #endif
+#ifdef GRIPPER_ZERO_MARK
+  while (1) {
+    if (gripper_zero_request == 1) {
+      gripper_zero_request = 0;
+      gripper_zero_tx_ok =
+          gripper_setzero(motor_new_gripper);
+      osDelay(200);
+    }
+
+    Motor_RS_Disable(motor_new_gripper);
+    Motor_RS_Transmit(motor_new_gripper);
+    osDelay(100);
+  }
+#endif
     // do{
     //     Enable_Arm_Motors(motor_gripper);
     //     osDelay(1);
     // }while (motor_gripper->motor_state == DM_DISABLE);
-      do
-     {
-        Enable_Gripper_Motors(motor_new_gripper);
-        osDelay(1);
-     }while (motor_new_gripper->motor_state == RS_DISABLE);
+    Motor_RS_Enable(motor_new_gripper);
+    Motor_RS_Transmit(motor_new_gripper);
     for (uint8_t i = 0; i < 9; i++){
       Enable_Arm_Motors(arm_motors[i]);
       osDelay(1);
