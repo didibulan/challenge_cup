@@ -15,6 +15,8 @@
 #include "dev_referee.h"
 #include "../Phoenix_Lib/Module/Motor/RobStride/dev_motor_rs.h"
 /************************************宏定义开关**************************************/
+//是否开启夹爪电机测试
+#define GRIPPER_TEST
 //是否开启夹爪电机零点标定
 //#define GRIPPER_ZERO_MARK
 //是否开启零点标定
@@ -24,7 +26,7 @@
 //是否开启循环使能
 //#define CIRCULAR_ENABLE
 //是否开启通信
- #define CAN_TRANSMIT
+// #define CAN_TRANSMIT
 /************************************extern_variable**************************************/
 extern osMutexId RoboticAlgMutexHandle;
 extern osMutexId RefereeMutexHandle;
@@ -57,10 +59,12 @@ extern Gravity_identificationInstance_s* link_gravity_identification;
 float arm_sign[9] = {1,1,1.f,-1,0,-1,1,-1,1};
 float arm_bias[9]={0,0.3f,3.14f,0,0,0,0,0,0};
 bool arm_custom_enable[9] ={1,1,1,1,1,1,1,1,1};
-//以下是测试变量 可以删除
+//以下是测试变量
 volatile uint8_t gripper_zero_request = 1;
 volatile bool gripper_zero_tx_ok = false;
-//以上是测试变量 可删除
+volatile int8_t open_close = 0;//-1 -> open  1 -> close
+volatile uint8_t gripper_state = 0;//0 -> disable  1 -> enable
+//以上是测试变量
 static uint64_t last_arm_mode = UINT64_MAX;
 static uint32_t custom_entry_seq = 0;
 static bool custom_target_active = false;
@@ -166,6 +170,46 @@ static void Arm_Run_Planned_Target(float target[9])
 
 /************************************Task**************************************/
 void App_ArmTask(void const * argument){
+#ifdef GRIPPER_TEST
+  while (1)
+  {
+    switch (open_close)
+    {
+      case -1 :
+        gripper_pos = 2.36f;
+        if (gripper_state == 0)
+        {
+          Motor_RS_Enable(motor_new_gripper);
+          Motor_RS_Transmit(motor_new_gripper);
+          gripper_state = 1;
+        }
+        Motor_RS_Control(motor_new_gripper,gripper_pos);
+        Motor_RS_Mit_Control(motor_new_gripper,0.0f,0.0f,0.0f,0.0f,motor_new_gripper->output);
+        Motor_RS_Transmit(motor_new_gripper);
+        osDelay(10);
+        break;
+      case 1 :
+        gripper_pos = -2.45f;
+        if (gripper_state == 0)
+        {
+          Motor_RS_Enable(motor_new_gripper);
+          Motor_RS_Transmit(motor_new_gripper);
+          gripper_state = 1;
+        }
+        Motor_RS_Control(motor_new_gripper,gripper_pos);
+        Motor_RS_Mit_Control(motor_new_gripper,0.0f,0.0f,0.0f,0.0f,motor_new_gripper->output);
+        Motor_RS_Transmit(motor_new_gripper);
+        osDelay(10);
+        break;
+      default :
+        Motor_RS_Disable(motor_new_gripper);
+        Motor_RS_Transmit(motor_new_gripper);
+        gripper_state = 0;
+        osDelay(10);
+        continue;
+    }
+  }
+#endif
 #ifdef BLANK_FUNCTION
     while (1){}
 #endif
