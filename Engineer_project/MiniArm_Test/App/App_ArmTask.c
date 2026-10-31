@@ -16,7 +16,7 @@
 #include "../Phoenix_Lib/Module/Motor/RobStride/dev_motor_rs.h"
 /************************************宏定义开关**************************************/
 //是否开启夹爪电机测试
-#define GRIPPER_TEST
+//#define GRIPPER_TEST
 //是否开启夹爪电机零点标定
 //#define GRIPPER_ZERO_MARK
 //是否开启零点标定
@@ -26,7 +26,7 @@
 //是否开启循环使能
 //#define CIRCULAR_ENABLE
 //是否开启通信
-// #define CAN_TRANSMIT
+#define CAN_TRANSMIT
 /************************************extern_variable**************************************/
 extern osMutexId RoboticAlgMutexHandle;
 extern osMutexId RefereeMutexHandle;

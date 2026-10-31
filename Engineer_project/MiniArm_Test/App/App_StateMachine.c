@@ -32,7 +32,7 @@ static void Update_Arm_Key_Control(void)
 
     // if (vt03_keys.z) gripper_pos = -0.2f;
     // if (vt03_keys.x) gripper_pos = 0.38f;
-     if (vt03_keys.z) gripper_pos = -2.52f;//闭合
+     if (vt03_keys.z) gripper_pos = -2.45f;//闭合
      if (vt03_keys.x) gripper_pos = 2.36f;//张开
     if (xSemaphoreTake(RefereeMutexHandle, 0) == pdTRUE) {
         if (vt03_keys.c && vt03_keys.shift) target_q[1] -= remote_j1_max_vel * key_dt;
