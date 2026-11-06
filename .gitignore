@@ -14,3 +14,7 @@
 .conda_envs/
 **/results/**
 **/TestData/**
+# 不提交的本地目录
+matlab/
+tools/
+Doc/

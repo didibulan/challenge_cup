@@ -108,7 +108,8 @@ float Pid_Calculate(PidInstance_s *pid, float target, float now)
         i_speed_ratio = 0;
         pid->i_out = 0; // 超出变速积分上限时清零积分项
     }
-    pid->i_out += pid->ki * pid->err[0] * i_speed_ratio;
+    float i_step = pid->ki * pid->err[0] * i_speed_ratio;
+    pid->i_out += i_step;
     // 积分限幅
     pid->i_out = Pid_Limit(pid->i_out, -pid->i_max, pid->i_max);
     // 计算微分项
@@ -121,11 +122,23 @@ float Pid_Calculate(PidInstance_s *pid, float target, float now)
         pid->d_out = -pid->kd * (pid->now[0] - pid->now[1]);
     }
     // 计算前馈项
-    pid->f_out = pid->kf * (pid->target[0] - pid->target[1]);
+    // 比例前馈：按目标值直接给电流，不等误差出现，响应更快、积分负担更小。
+    // 原实现是对目标求微分（只在指令变化那一拍给脉冲），对稳态无效，故改为比例式。
+    // pid->f_out = pid->kf * (pid->target[0] - pid->target[1]);
+    pid->f_out = pid->kf * pid->target[0];
     // 计算输出
     pid->output = pid->p_out + pid->i_out + pid->d_out + pid->f_out;
-    // 输出限幅
-    pid->output = Pid_Limit(pid->output, -pid->out_max, pid->out_max);
+    // 输出限幅 + 抗饱和
+    // 输出被顶住时，说明再怎么积分也没用，把这一拍的积分退回去，
+    // 否则松杆之后积分要很久才能退出来（表现为"松杆还在爬"）。
+    if (pid->output > pid->out_max){
+        pid->output = pid->out_max;
+        if (i_step > 0.0f) pid->i_out -= i_step;
+    }
+    else if (pid->output < -pid->out_max){
+        pid->output = -pid->out_max;
+        if (i_step < 0.0f) pid->i_out -= i_step;
+    }
     // 善后操作
     pid->err[1] = pid->err[0];
     pid->target[1] = pid->target[0];

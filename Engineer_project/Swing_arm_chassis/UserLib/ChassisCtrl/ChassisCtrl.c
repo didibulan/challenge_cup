@@ -9,9 +9,15 @@
 *   @note
 */
 #include "ChassisCtrl.h"
+#include "robot_config.h"
 /************************************Private_variable**************************************/
 static Chassis_Speed Temp_Speed;
 float gain = 1.f;
+#ifdef DEBUG_TUNING
+// 右侧(2/3 号轮)轮速系数：1.00 = 不补偿，>1 = 右侧提速（纠正右偏），<1 = 右侧降速
+// 计算：s = 1 + 2·B·d / L²   （B=轮距0.892m, d=跑L米后的横向偏移）
+volatile float dbg_right_scale = 1.05f;
+#endif
 /************************************Public_variable**************************************/
 
 /************************************Private_function**************************************/
@@ -187,10 +193,13 @@ void SAChassis_Calc(ChassisInstance_s *Chassis, float delta_vel){
 
     // 4. 控制四个驱动电机
     for (uint8_t i = 0; i < 4; i++){
-        if (fabsf(delta_vel) >= 1e-6f)
-            Motor_Dji_Control(Chassis->chassis_motor[i], chassis_vel_AddDelta[i]);
-        else
-            Motor_Dji_Control(Chassis->chassis_motor[i], Chassis->out_speed[i]);
+        float cmd = (fabsf(delta_vel) >= 1e-6f) ? chassis_vel_AddDelta[i] : Chassis->out_speed[i];
+#ifdef DEBUG_TUNING
+        // 右侧轮速系数：重心偏左导致右轮打滑/右偏时，用它微调左右速度平衡。
+        // 1.00 = 不补偿；<1 右侧降速；>1 右侧提速。
+        if (i >= 2) cmd *= dbg_right_scale;
+#endif
+        Motor_Dji_Control(Chassis->chassis_motor[i], cmd);
     }
 }
 

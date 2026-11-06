@@ -137,6 +137,87 @@ static BaseType_t ZeroPoint_Mark(DmMotorInstance_s *motor_joint_x){
     return pdTRUE;
 }
 #endif
+/************************************调试调参**************************************/
+#ifdef DEBUG_TUNING
+/*
+ * 单轮调参模式：一次只动一个轮子，其余三轮目标转速强制为 0。
+ * 所有变量都在 Ozone 的 Watched Data 里直接双击修改，不需要重新编译烧录。
+ *
+ * 用法：
+ *   1. dbg_chassis_mode = 1        进入调参模式（此时正常底盘控制被旁路）
+ *   2. dbg_wheel_index = 0..3      选被测轮（0=LF 1=LR 2=RR 3=RF）
+ *   3. dbg_auto_step   = 1         自动方波；= 0 时用手动 dbg_target_rpm
+ *   4. 采样 out_velocity 看响应
+ *
+ * 注意：调完把 dbg_chassis_mode 改回 0，否则整车不动。
+ */
+volatile uint8_t  dbg_chassis_mode = 0;      // 0=正常运行 1=单轮调参
+volatile uint8_t  dbg_wheel_index  = 0;      // 被测轮号
+volatile float    dbg_target_rpm   = 0.0f;   // 手动模式目标转速（输出轴 rpm）
+volatile uint8_t  dbg_auto_step    = 1;      // 1=自动方波
+volatile float    dbg_step_low     = 0.0f;   // 方波低电平 rpm
+volatile float    dbg_step_high    = 200.0f; // 方波高电平 rpm
+volatile uint16_t dbg_step_period  = 1000;   // 方波半周期 ms
+
+static uint32_t dbg_tick  = 0;
+static uint8_t  dbg_level = 0;
+
+#define DBG_RPM_LIMIT  450.0f   // 安全限幅，M3508 输出轴上限约 470 rpm
+
+static void Chassis_Telem_Update(void);   // 定义在下面
+
+static void Debug_Chassis_Control(void)
+{
+    float target;
+
+    if (dbg_auto_step){
+        if (++dbg_tick >= dbg_step_period){
+            dbg_tick = 0;
+            dbg_level ^= 1u;
+        }
+        target = dbg_level ? dbg_step_high : dbg_step_low;
+    }
+    else{
+        target = dbg_target_rpm;
+    }
+
+    if (target >  DBG_RPM_LIMIT) target =  DBG_RPM_LIMIT;
+    if (target < -DBG_RPM_LIMIT) target = -DBG_RPM_LIMIT;
+
+    uint8_t idx = (dbg_wheel_index > 3u) ? 0u : dbg_wheel_index;
+
+    for (uint8_t i = 0; i < 4; i++){
+        Motor_Dji_Control(chassis_instance->chassis_motor[i], (i == idx) ? target : 0.0f);
+    }
+    Motor_Dji_Transmit(chassis_instance->chassis_motor[0]);
+    Chassis_Telem_Update();
+}
+
+/*
+ * 遥测镜像：把指针链里的量复制到固定地址的全局数组。
+ * 原因：Ozone 的 Data Sampling 只能画"地址在采样前就确定"的量，
+ *       chassis_instance->chassis_motor[i]->xxx 是运行时才解析的指针链，
+ *       它会报 "unknown data location" 画不出来。
+ * 这里每 1 ms 同步一次，之后在 Data Sampling 里加 dbg_motor_speed[0] 即可。
+ */
+volatile float dbg_motor_target[4];   // 目标转速 rpm
+volatile float dbg_motor_speed[4];    // 实际转速 rpm
+volatile float dbg_motor_output[4];   // 电流指令（-16384..16384）
+volatile float dbg_motor_iout[4];     // 积分项
+
+static void Chassis_Telem_Update(void)
+{
+    if (chassis_instance == NULL) return;
+    for (uint8_t i = 0; i < 4; i++){
+        DjiMotorInstance_s *m = chassis_instance->chassis_motor[i];
+        if (m == NULL) continue;
+        dbg_motor_target[i] = m->target_velocity;
+        dbg_motor_speed[i]  = m->message.out_velocity;
+        dbg_motor_output[i] = m->output;
+        dbg_motor_iout[i]   = (m->velocity_pid != NULL) ? m->velocity_pid->i_out : 0.0f;
+    }
+}
+#endif
 /************************************Task**************************************/
 void App_ChassisTask(void const* argument){
     while (!istrackInitialized)osDelay(10);
@@ -168,6 +249,13 @@ void App_ChassisTask(void const* argument){
                 leg_now_pos[i] = leg_motors[i]->message.position;
             xSemaphoreGive(CmdMutexHandle);
         }
+#ifdef DEBUG_TUNING
+        if (dbg_chassis_mode){
+            Debug_Chassis_Control();
+            osDelay(1);
+            continue;
+        }
+#endif
 #ifdef CAN_TRANSMIT
         if (is_chassis_enable){
             //底盘电机控制
@@ -201,6 +289,9 @@ void App_ChassisTask(void const* argument){
             }
         }
 
+#endif
+#ifdef DEBUG_TUNING
+        Chassis_Telem_Update();
 #endif
         osDelay(1);
     }

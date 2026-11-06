@@ -1,0 +1,58 @@
+
+
+GraphedExpression="dbg_motor_target[0]", Color=#e56a6f, Show=0
+GraphedExpression="dbg_motor_speed[0]", Color=#35792b, Show=0
+GraphedExpression="dbg_motor_output[0]", Color=#769dda, Show=0
+GraphedExpression="dbg_motor_iout[0]", Color=#b14f0d, Show=0
+GraphedExpression="dbg_motor_output[1]", Color=#b3c38e, Show=0
+OpenDocument="main.c", FilePath="E:/RM/rein/some idea/challenge_cup-main/challenge_cup-main/Engineer_project/Swing_arm_chassis/Core/Src/main.c", Line=62
+OpenDocument="tasks.c", FilePath="E:/RM/rein/some idea/challenge_cup-main/challenge_cup-main/Engineer_project/Swing_arm_chassis/Middlewares/Third_Party/FreeRTOS/Source/tasks.c", Line=2225
+OpenDocument="App_ChassisTask.c", FilePath="E:/RM/rein/some idea/challenge_cup-main/challenge_cup-main/Engineer_project/Swing_arm_chassis/App/App_ChassisTask.c", Line=6
+OpenDocument="App_InitTask.c", FilePath="E:/RM/rein/some idea/challenge_cup-main/challenge_cup-main/Engineer_project/Swing_arm_chassis/App/App_InitTask.c", Line=0
+OpenDocument="App_InitTask.h", FilePath="E:/RM/rein/some idea/challenge_cup-main/challenge_cup-main/Engineer_project/Swing_arm_chassis/App/App_InitTask.h", Line=0
+OpenDocument="Swing_arm_chassis.jdebug", FilePath="E:/RM/rein/some idea/challenge_cup-main/challenge_cup-main/Engineer_project/Swing_arm_chassis/ozone/Swing_arm_chassis.jdebug", Line=0
+OpenDocument="stm32h7xx_hal_fdcan.c", FilePath="E:/RM/rein/some idea/challenge_cup-main/challenge_cup-main/Engineer_project/Swing_arm_chassis/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_fdcan.c", Line=3077
+OpenToolbar="Debug", Floating=0, x=0, y=0
+OpenWindow="Registers 1", DockArea=RIGHT, x=0, y=1, w=300, h=256, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, FilteredItems=[], RefreshRate=1
+OpenWindow="Source Files", DockArea=LEFT, x=0, y=1, w=1763, h=125, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=300, h=168, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Watched Data 1", DockArea=LEFT, x=0, y=2, w=1763, h=99, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Call Graph", DockArea=LEFT, x=0, y=0, w=1763, h=99, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Terminal", DockArea=BOTTOM, x=2, y=0, w=398, h=836, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Data Sampling", DockArea=BOTTOM, x=0, y=0, w=1711, h=836, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, VisibleTab=0, UniformSampleSpacing=0
+OpenWindow="Console", DockArea=BOTTOM, x=1, y=0, w=449, h=836, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Watched Data 2", DockArea=LEFT, x=0, y=3, w=1763, h=99, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+SmartViewPlugin="", Page="", Toolbar="Hidden", Window="SmartView 1"
+TableHeader="Source Files", SortCol="File", SortOrder="DESCENDING", VisibleCols=["File";"Status";"Size";"#Insts";"Path"], ColWidths=[271;100;100;100;1350]
+TableHeader="Call Graph", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Stack Total";"Stack Local";"Code Total";"Code Local";"Depth";"Called From"], ColWidths=[666;126;126;118;118;100;483]
+TableHeader="Data Sampling Table", SortCol="None", SortOrder="ASCENDING", VisibleCols=["Index";"Time";" dbg_motor_target[0]";" dbg_motor_speed[0]";" dbg_motor_output[0]";" dbg_motor_iout[0]";" dbg_motor_output[1]"], ColWidths=[100;100;100;100;100;100;1111]
+TableHeader="Data Sampling Setup", SortCol="Expression", SortOrder="ASCENDING", VisibleCols=["Expression";"Type";"Value";"Min";"Max";"Average";"# Changes";"Min. Change";"Max. Change"], ColWidths=[166;100;100;154;164;100;110;126;691]
+TableHeader="Power Sampling", SortCol="None", SortOrder="ASCENDING", VisibleCols=["Index";"Time";"Ch 0"], ColWidths=[100;100;100]
+TableHeader="Task List", SortCol="None", SortOrder="ASCENDING", VisibleCols=["Name";"Run Count";"Priority";"Status";"Timeout";"Stack Info";"ID";"Mutex Count";"Notified Value";"Notify State"], ColWidths=[110;110;110;110;110;110;110;110;110;110]
+TableHeader="Registers 1", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Description"], ColWidths=[100;144;118]
+TableHeader="Watched Data 1", SortCol="Expression", SortOrder="ASCENDING", VisibleCols=["Expression";"Value";"Location";"Refresh"], ColWidths=[100;100;100;1437]
+TableHeader="RegisterSelectionDialog", SortCol="None", SortOrder="ASCENDING", VisibleCols=[], ColWidths=[]
+TableHeader="Watched Data 2", SortCol="Expression", SortOrder="ASCENDING", VisibleCols=["Expression";"Value";"Location";"Refresh"], ColWidths=[100;100;100;1437]
+WatchedExpression="chassis_vel[0]", Window=Watched Data 1
+WatchedExpression="chassis_vel[1]", Window=Watched Data 1
+WatchedExpression="chassis_vel[2]", Window=Watched Data 1
+WatchedExpression="chassis_instance->out_speed[0]", Window=Watched Data 1
+WatchedExpression="chassis_instance->out_speed[1]", Window=Watched Data 1
+WatchedExpression="chassis_instance->chassis_motor[0]->message.out_velocity", Window=Watched Data 1
+WatchedExpression="chassis_instance->chassis_motor[1]->message.out_velocity", Window=Watched Data 1
+WatchedExpression="chassis_instance->chassis_motor[2]->message.out_velocity", Window=Watched Data 1
+WatchedExpression="chassis_instance->chassis_motor[3]->message.out_velocity", Window=Watched Data 1
+WatchedExpression="chassis_instance->chassis_motor[0]->target_velocity", Window=Watched Data 1
+WatchedExpression="dbg_chassis_mode", Window=Watched Data 2
+WatchedExpression="dbg_wheel_index", Window=Watched Data 2
+WatchedExpression="dbg_auto_step", Window=Watched Data 2
+WatchedExpression="dbg_step_high", Window=Watched Data 2
+WatchedExpression="dbg_step_low", Window=Watched Data 2
+WatchedExpression="dbg_step_period", Window=Watched Data 2
+WatchedExpression="chassis_instance->chassis_motor[0]->target_velocity", Window=Watched Data 2
+WatchedExpression="chassis_instance->chassis_motor[0]->message.out_velocity", Window=Watched Data 2
+WatchedExpression="chassis_instance->chassis_motor[0]->velocity_pid->output", Window=Watched Data 2
+WatchedExpression="chassis_instance->chassis_motor[0]->velocity_pid->i_out", Window=Watched Data 2
+WatchedExpression="chassis_instance->chassis_motor[0]->velocity_pid->kp", Window=Watched Data 2
+WatchedExpression="chassis_instance->chassis_motor[0]->velocity_pid->ki", Window=Watched Data 2
+WatchedExpression="chassis_instance->chassis_motor[0]->velocity_pid->i_max", Window=Watched Data 2

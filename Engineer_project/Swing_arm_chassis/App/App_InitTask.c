@@ -18,7 +18,7 @@ DmMotorInstance_s* leg_motors[4] = {NULL};
 ServoInstance_s* storage_servo[2] = {NULL};
 //底盘实例
 ChassisInstance_s *chassis_instance = NULL;
-//是否初始化完成
+//是否初始化完�
 bool istrackInitialized = false;
 /************************************Init_Settings**************************************/
 //备用电机占位
@@ -200,11 +200,14 @@ ChassisInitConfig_s chassis_config = {
             },
             .reduction_ratio = 19.0f,
             .velocity_pid_config = {
-                .kp = 100.0f,
+                .kp = 120.0f,
                 .ki = 10.0f,
                 .kd = 0.0f,
-                .i_max = 3000.0f,
+                .kf = 2.0f,
+                .i_max = 5000.0f,
                 .out_max = 15000.0f,
+                .i_variable_min = 30.0f,
+                .i_variable_max = 150.0f,
             },
         },
         {
@@ -218,11 +221,14 @@ ChassisInitConfig_s chassis_config = {
             },
             .reduction_ratio = 19.0f,
             .velocity_pid_config = {
-                .kp = 120.0f,
-                .ki = 50.0f,
+                .kp = 140.0f,
+                .ki = 10.0f,
                 .kd = 0.0f,
-                .i_max = 1500.0f,
+                .kf = 2.0f,
+                .i_max = 5000.0f,
                 .out_max = 15000.0f,
+                .i_variable_min = 30.0f,
+                .i_variable_max = 150.0f,
             },
         },
         {
@@ -237,10 +243,13 @@ ChassisInitConfig_s chassis_config = {
             .reduction_ratio = 19.0f,
             .velocity_pid_config = {
                 .kp = 120.0f,
-                .ki = 40.0f,
+                .ki = 10.0f,
                 .kd = 0.0f,
-                .i_max = 1500.0f,
+                .kf = 2.0f,
+                .i_max = 5000.0f,
                 .out_max = 15000.0f,
+                .i_variable_min = 30.0f,
+                .i_variable_max = 150.0f,
             },
         },
         {
@@ -255,10 +264,13 @@ ChassisInitConfig_s chassis_config = {
             .reduction_ratio = 19.0f,
             .velocity_pid_config = {
                 .kp = 120.0f,
-               .ki = 20.0f,
+               .ki = 10.0f,
                 .kd = 0.0f,
-                .i_max = 3000.0f,
+                .kf = 2.0f,
+                .i_max = 5000.0f,
                 .out_max = 15000.0f,
+                .i_variable_min = 30.0f,
+                .i_variable_max = 150.0f,
             },
         }
     },
@@ -287,8 +299,8 @@ void App_Init(void const* argument){
     while (storage_servo[1] == NULL) storage_servo[1] = Servo_Register(&servo_config_2);
     //底盘实例
     while (chassis_instance == NULL) chassis_instance = Chassis_Register(&chassis_config);
-    //是否初始化完成
+    //是否初始化完�
     istrackInitialized = true;
-    //删除初始化任务
+    //删除初始化任�
     vTaskDelete(NULL);
 }
