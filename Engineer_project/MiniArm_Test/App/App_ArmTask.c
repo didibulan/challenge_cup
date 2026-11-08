@@ -215,28 +215,18 @@ void App_ArmTask(void const * argument){
 #endif
 
 #ifdef CIRCULAR_ENABLE
-    // while (1){
-    //     //Enable_Arm_Motors(motor_gripper);
-    //      Motor_RS_Enable(motor_new_gripper);
-    //      Motor_RS_Transmit(motor_new_gripper);
-    //      osDelay(1);
-    //      for (uint8_t i = 0; i < 9; i++){
-    //        Enable_Arm_Motors(arm_motors[i]);
-    //        osDelay(2);
-    //       }
-      /*
-       *夹爪电机测试
-       */
-      // while (1) {
-      //   // 零力矩控制
-      //   Motor_RS_Mit_Control(motor_new_gripper, 0, 0, 0, 0, 0);
-      //   Motor_RS_Transmit(motor_new_gripper);
-      //   osDelay(10);
-      //
-      //   Motor_RS_Enable(motor_new_gripper);
-      //   Motor_RS_Transmit(motor_new_gripper);
-      //   osDelay(20);
-      // }
+    while (1)
+    {
+      ////Enable_Arm_Motors(motor_gripper);
+      Motor_RS_Enable(motor_new_gripper);
+      Motor_RS_Transmit(motor_new_gripper);
+      osDelay(1);
+      for (uint8_t i = 0; i < 9; i++)
+      {
+        Enable_Arm_Motors(arm_motors[i]);
+        osDelay(2);
+      }
+    }
 #endif
 
 #ifdef ZERO_POINT_MARK
@@ -367,22 +357,22 @@ void App_ArmTask(void const * argument){
             case 0:default:
             Arm_Run_Planned_Target(remote_target_q);
 
-            // Motor_Dm_Mit_Control(motor_gripper, gripper_pos, 2.f, -0.5f);
-          Motor_RS_Control(motor_new_gripper, gripper_pos);
-          Motor_RS_Mit_Control(motor_new_gripper,0.0f,0.0f,0.0f,0.0f,motor_new_gripper->output);
+            //// Motor_Dm_Mit_Control(motor_gripper, gripper_pos, 2.f, -0.5f);
+          //Motor_RS_Control(motor_new_gripper, gripper_pos);
+          //Motor_RS_Mit_Control(motor_new_gripper,0.0f,0.0f,0.0f,0.0f,motor_new_gripper->output);
 #ifdef CAN_TRANSMIT
-            //Motor_Dm_Transmit(motor_gripper);
-          Motor_RS_Transmit(motor_new_gripper);
+            ////Motor_Dm_Transmit(motor_gripper);
+          //Motor_RS_Transmit(motor_new_gripper);
 #endif
                 break;
             case 1:
             Arm_Run_Planned_Target(hold_target_q);
-            //Motor_Dm_Mit_Control(motor_gripper, gripper_pos, 2.f, -0.5f);
-          Motor_RS_Control(motor_new_gripper, gripper_pos);
-          Motor_RS_Mit_Control(motor_new_gripper,0.0f,0.0f,0.0f,0.0f,motor_new_gripper->output);
+            ////Motor_Dm_Mit_Control(motor_gripper, gripper_pos, 2.f, -0.5f);
+          //Motor_RS_Control(motor_new_gripper, gripper_pos);
+          //Motor_RS_Mit_Control(motor_new_gripper,0.0f,0.0f,0.0f,0.0f,motor_new_gripper->output);
 #ifdef CAN_TRANSMIT
-            //Motor_Dm_Transmit(motor_gripper);
-          Motor_RS_Transmit(motor_new_gripper);
+            ////Motor_Dm_Transmit(motor_gripper);
+          //Motor_RS_Transmit(motor_new_gripper);
 #endif
                 break;
             //执行自定义控制器指令
